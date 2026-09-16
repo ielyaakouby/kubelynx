@@ -237,7 +237,24 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Maintainer release steps are in [docs/RE
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+KubeLynx is an open-source project built for the Kubernetes community, and contributions are welcome from everyone.
+
+Whether you are an SRE, Platform Engineer, DevOps Engineer, Bash developer, Kubernetes user, security engineer, documentation contributor, or making your first open-source contribution, you are welcome to participate.
+
+You can help by:
+
+- fixing bugs
+- improving diagnostics and RCA
+- adding tests
+- improving documentation
+- suggesting SRE workflows
+- reporting issues
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and the [Code of Conduct](CODE_OF_CONDUCT.md). Open a pull request against `main` after `make check`.
+
+For substantial behavioral or architectural changes, please open an issue first so the approach can be discussed with the community.
+
+Repository: [github.com/ielyaakouby/kubelynx](https://github.com/ielyaakouby/kubelynx).
 
 ## Releases
 
@@ -249,10 +266,14 @@ Verify downloaded archives:
 sha256sum -c SHA256SUMS
 ```
 
+## Security
+
+Please report vulnerabilities privately. Do not open a public GitHub issue.
+
+See [SECURITY.md](SECURITY.md) for how to report, what to include, and GitHub Private Vulnerability Reporting.
+
 ## License
 
-[Apache License 2.0](LICENSE)
+KubeLynx is licensed under the [Apache License 2.0](LICENSE).
 
-## Author
-
-[Ismail Elyaakouby](https://github.com/ielyaakouby)
+Copyright 2026 [Ismail Elyaakouby](https://github.com/ielyaakouby).

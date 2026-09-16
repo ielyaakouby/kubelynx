@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: validate-package-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install lint and packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck zip
+          curl -fsSL -o /tmp/shfmt \
+            "https://github.com/mvdan/sh/releases/download/v3.11.0/shfmt_v3.11.0_linux_amd64"
+          sudo install -m 0755 /tmp/shfmt /usr/local/bin/shfmt
+
+      - name: Validate tag against VERSION
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          tag_version="${tag#v}"
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          echo "Tag:     ${tag}"
+          echo "VERSION: ${file_version}"
+          if [[ "${tag_version}" != "${file_version}" ]]; then
+            echo "::error::Tag ${tag} does not match VERSION (${file_version}). Refusing to release."
+            exit 1
+          fi
+
+      - name: Quality checks
+        run: make check
+
+      - name: Build release archives
+        run: bash scripts/package-release.sh dist
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: kubelynx-${{ github.ref_name }}
+          path: |
+            dist/kubelynx-${{ github.ref_name }}.tar.gz
+            dist/kubelynx-${{ github.ref_name }}.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/kubelynx-${GITHUB_REF_NAME}.tar.gz" \
+            "dist/kubelynx-${GITHUB_REF_NAME}.zip" \
+            dist/SHA256SUMS \
+            --generate-notes \
+            --title "KubeLynx ${GITHUB_REF_NAME}"

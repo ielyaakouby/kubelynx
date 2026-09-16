@@ -1,0 +1,100 @@
+name: Bug report
+description: Report a bug in KubeLynx
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        **Do not paste any of the following:**
+        - kubeconfig contents
+        - bearer tokens
+        - passwords
+        - Kubernetes Secret values
+        - cloud credentials
+        - AI API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, and similar)
+
+        Sanitize logs before attaching them.
+  - type: input
+    id: version
+    attributes:
+      label: KubeLynx version
+      description: Output of `kubelynx --version` (for example `KubeLynx v3.0.0`)
+      placeholder: KubeLynx v3.0.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04, Debian 12, ...
+    validations:
+      required: true
+  - type: input
+    id: bash
+    attributes:
+      label: Bash version
+      description: Output of `bash --version | head -n1`
+    validations:
+      required: true
+  - type: input
+    id: kubectl
+    attributes:
+      label: kubectl version
+      description: Client version only. Do not paste cluster credentials.
+  - type: input
+    id: kubernetes
+    attributes:
+      label: Kubernetes version
+      description: Only if relevant to the bug. Do not include endpoints or tokens.
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - GitHub Release archive
+        - git clone + installer
+        - Development symlink (--dev)
+        - Running ./bin/kubelynx.sh from a clone
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: context_type
+    attributes:
+      label: Current context type (optional)
+      description: For example kind, k3s, EKS, GKE, AKS, on-prem. Do not include cluster names that are sensitive, and never paste kubeconfig.
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Run `kubelynx`
+        2. Open ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs / output
+      description: Remove secrets, tokens, and identifying hostnames before pasting.

@@ -1,5 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 select_node_kget_node_infos() {
     local nodes
     nodes=$(kubectl get nodes --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
@@ -59,8 +62,8 @@ kget_node_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select node info to display: " --header="Press TAB to select multiple, or ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select node info to display: " --header="Press TAB to select multiple, or ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -72,14 +75,14 @@ kget_node_info() {
     }
 
     # Extract node details
-    NAME=$(jq -r '.metadata.name' <<< "$node_json")
+    NAME=$(jq -r '.metadata.name' <<<"$node_json")
     STATUS=$(kubectl get node "$node_name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
     STATUS_ICON=$([[ "$STATUS" == "True" ]] && echo "Ready" || echo "Not Ready")
-    CPU_ALLOCATABLE=$(jq -r '.status.allocatable.cpu' <<< "$node_json")
-    MEMORY_ALLOCATABLE=$(jq -r '.status.allocatable.memory' <<< "$node_json")
+    CPU_ALLOCATABLE=$(jq -r '.status.allocatable.cpu' <<<"$node_json")
+    MEMORY_ALLOCATABLE=$(jq -r '.status.allocatable.memory' <<<"$node_json")
 
-    MEMORY_VALUE=$(sed -E 's/([0-9]+)([a-zA-Z]+)/\1/' <<< "$MEMORY_ALLOCATABLE")
-    MEMORY_UNIT=$(sed -E 's/[0-9]+([a-zA-Z]+)/\1/' <<< "$MEMORY_ALLOCATABLE")
+    MEMORY_VALUE=$(sed -E 's/([0-9]+)([a-zA-Z]+)/\1/' <<<"$MEMORY_ALLOCATABLE")
+    MEMORY_UNIT=$(sed -E 's/[0-9]+([a-zA-Z]+)/\1/' <<<"$MEMORY_ALLOCATABLE")
     if [[ "$MEMORY_UNIT" == "Gi" ]]; then
         MEMORY_ALLOCATABLE_ok=$((MEMORY_VALUE))
     elif [[ "$MEMORY_UNIT" == "Mi" ]]; then
@@ -90,14 +93,14 @@ kget_node_info() {
         MEMORY_ALLOCATABLE_ok="$MEMORY_ALLOCATABLE"
     fi
 
-    POD_CAPACITY=$(jq -r '.status.capacity.pods' <<< "$node_json")
-    ARCHITECTURE=$(jq -r '.status.nodeInfo.architecture' <<< "$node_json")
-    KERNEL_VERSION=$(jq -r '.status.nodeInfo.kernelVersion' <<< "$node_json")
-    OS=$(jq -r '.status.nodeInfo.operatingSystem' <<< "$node_json")
-    OS_IMAGE=$(jq -r '.status.nodeInfo.osImage' <<< "$node_json")
-    CONTAINER_RUNTIME=$(jq -r '.status.nodeInfo.containerRuntimeVersion' <<< "$node_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$node_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$node_json")
+    POD_CAPACITY=$(jq -r '.status.capacity.pods' <<<"$node_json")
+    ARCHITECTURE=$(jq -r '.status.nodeInfo.architecture' <<<"$node_json")
+    KERNEL_VERSION=$(jq -r '.status.nodeInfo.kernelVersion' <<<"$node_json")
+    OS=$(jq -r '.status.nodeInfo.operatingSystem' <<<"$node_json")
+    OS_IMAGE=$(jq -r '.status.nodeInfo.osImage' <<<"$node_json")
+    CONTAINER_RUNTIME=$(jq -r '.status.nodeInfo.containerRuntimeVersion' <<<"$node_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$node_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$node_json")
     CONDITIONS=$(<"$TMP_DESC_FILE")
 
     TOTAL_PODS=$(echo "$PODS_DATA" | wc -l)
@@ -165,16 +168,16 @@ kget_pod_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$pod_json")
-    NODE_NAME=$(jq -r '.spec.nodeName // "N/A"' <<< "$pod_json")
-    READY=$(jq -r '.status.containerStatuses | length as $total | map(select(.ready)) | length as $ready | "\($ready)/\($total)"' <<< "$pod_json")
-    STATUS=$(jq -r '.status.phase' <<< "$pod_json")
-    RESTARTS=$(jq -r '.status.containerStatuses | map(.restartCount) | add' <<< "$pod_json")
-    CONTAINERS=$(jq -r '.spec.containers[].name' <<< "$pod_json" | paste -sd, -)
-    IMAGE=$(jq -r '.spec.containers[] | "\(.name): \(.image)"' <<< "$pod_json")
+    NAME=$(jq -r '.metadata.name' <<<"$pod_json")
+    NODE_NAME=$(jq -r '.spec.nodeName // "N/A"' <<<"$pod_json")
+    READY=$(jq -r '.status.containerStatuses | length as $total | map(select(.ready)) | length as $ready | "\($ready)/\($total)"' <<<"$pod_json")
+    STATUS=$(jq -r '.status.phase' <<<"$pod_json")
+    RESTARTS=$(jq -r '.status.containerStatuses | map(.restartCount) | add' <<<"$pod_json")
+    CONTAINERS=$(jq -r '.spec.containers[].name' <<<"$pod_json" | paste -sd, -)
+    IMAGE=$(jq -r '.spec.containers[] | "\(.name): \(.image)"' <<<"$pod_json")
     KIND=$(kubectl get pod "$pod_name" -n "$namespace" -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null)
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$pod_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$pod_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$pod_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$pod_json")
 
     local available_sections=(
         "Name"
@@ -191,8 +194,8 @@ kget_pod_info() {
 
     local selected_sections
     selected_sections=$(printf "%s
-" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select pod info to display: " --header="TAB to select multiple, ENTER for all")
+" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select pod info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -252,14 +255,14 @@ kget_deployment_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$deploy_json")
-    REPLICAS=$(jq -r '.spec.replicas' <<< "$deploy_json")
-    AVAILABLE=$(jq -r '.status.availableReplicas // 0' <<< "$deploy_json")
-    UPDATED=$(jq -r '.status.updatedReplicas // 0' <<< "$deploy_json")
-    IMAGE=$(jq -r '.spec.template.spec.containers[] | "\(.name): \(.image)"' <<< "$deploy_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$deploy_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$deploy_json")
-    SELECTOR=$(jq -r '.spec.selector.matchLabels | to_entries[] | "- \(.key): \(.value)"' <<< "$deploy_json")
+    NAME=$(jq -r '.metadata.name' <<<"$deploy_json")
+    REPLICAS=$(jq -r '.spec.replicas' <<<"$deploy_json")
+    AVAILABLE=$(jq -r '.status.availableReplicas // 0' <<<"$deploy_json")
+    UPDATED=$(jq -r '.status.updatedReplicas // 0' <<<"$deploy_json")
+    IMAGE=$(jq -r '.spec.template.spec.containers[] | "\(.name): \(.image)"' <<<"$deploy_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$deploy_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$deploy_json")
+    SELECTOR=$(jq -r '.spec.selector.matchLabels | to_entries[] | "- \(.key): \(.value)"' <<<"$deploy_json")
 
     local available_sections=(
         "Name"
@@ -272,8 +275,8 @@ kget_deployment_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select deployment info to display: " --header="TAB to select multiple, ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select deployment info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -288,7 +291,7 @@ kget_deployment_info() {
     show_section "Name" && echo "Name: $NAME"
     show_section "Namespace" && echo "Namespace: $namespace"
     show_section "Replicas" && echo "Replicas: $AVAILABLE available / $UPDATED updated / desired $REPLICAS"
-    show_section "Image" && echo "Image(s):\n$IMAGE"
+    show_section "Image" && printf 'Image(s):\n%s\n' "$IMAGE"
 
     if show_section "Labels"; then
         echo -e "\nLabels:"
@@ -331,14 +334,14 @@ kget_statefulset_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$sts_json")
-    REPLICAS=$(jq -r '.spec.replicas' <<< "$sts_json")
-    READY=$(jq -r '.status.readyReplicas // 0' <<< "$sts_json")
-    CURRENT=$(jq -r '.status.currentReplicas // 0' <<< "$sts_json")
-    IMAGE=$(jq -r '.spec.template.spec.containers[] | "\(.name): \(.image)"' <<< "$sts_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$sts_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$sts_json")
-    SELECTOR=$(jq -r '.spec.selector.matchLabels | to_entries[] | "- \(.key): \(.value)"' <<< "$sts_json")
+    NAME=$(jq -r '.metadata.name' <<<"$sts_json")
+    REPLICAS=$(jq -r '.spec.replicas' <<<"$sts_json")
+    READY=$(jq -r '.status.readyReplicas // 0' <<<"$sts_json")
+    CURRENT=$(jq -r '.status.currentReplicas // 0' <<<"$sts_json")
+    IMAGE=$(jq -r '.spec.template.spec.containers[] | "\(.name): \(.image)"' <<<"$sts_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$sts_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$sts_json")
+    SELECTOR=$(jq -r '.spec.selector.matchLabels | to_entries[] | "- \(.key): \(.value)"' <<<"$sts_json")
 
     local available_sections=(
         "Name"
@@ -352,8 +355,8 @@ kget_statefulset_info() {
 
     local selected_sections
     selected_sections=$(printf "%s
-" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select statefulset info to display: " --header="TAB to select multiple, ENTER for all")
+" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select statefulset info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -416,11 +419,11 @@ kget_secret_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$secret_json")
-    TYPE=$(jq -r '.type' <<< "$secret_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$secret_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$secret_json")
-    DATA_KEYS=$(jq -r '.data | to_entries[] | "- \(.key) (base64 encoded)"' <<< "$secret_json")
+    NAME=$(jq -r '.metadata.name' <<<"$secret_json")
+    TYPE=$(jq -r '.type' <<<"$secret_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$secret_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$secret_json")
+    DATA_KEYS=$(jq -r '.data | to_entries[] | "- \(.key) (base64 encoded)"' <<<"$secret_json")
 
     local available_sections=(
         "Name"
@@ -433,8 +436,8 @@ kget_secret_info() {
 
     local selected_sections
     selected_sections=$(printf "%s
-" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select secret info to display: " --header="TAB to select multiple, ENTER for all")
+" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select secret info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -495,12 +498,12 @@ kget_configmap_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$cm_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$cm_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$cm_json")
+    NAME=$(jq -r '.metadata.name' <<<"$cm_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$cm_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$cm_json")
     DATA=$(jq -r '.data | to_entries[] | "- \(.key): 
 \(.value)
-"' <<< "$cm_json")
+"' <<<"$cm_json")
 
     local available_sections=(
         "Name"
@@ -512,8 +515,8 @@ kget_configmap_info() {
 
     local selected_sections
     selected_sections=$(printf "%s
-" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select configmap info to display: " --header="TAB to select multiple, ENTER for all")
+" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select configmap info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -573,13 +576,13 @@ kget_service_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$svc_json")
-    TYPE=$(jq -r '.spec.type' <<< "$svc_json")
-    CLUSTER_IP=$(jq -r '.spec.clusterIP' <<< "$svc_json")
-    PORTS=$(jq -r '.spec.ports[] | "- Port: \(.port), Protocol: \(.protocol), TargetPort: \(.targetPort)"' <<< "$svc_json")
-    SELECTOR=$(jq -r '.spec.selector // {} | to_entries[] | "- \(.key): \(.value)"' <<< "$svc_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$svc_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$svc_json")
+    NAME=$(jq -r '.metadata.name' <<<"$svc_json")
+    TYPE=$(jq -r '.spec.type' <<<"$svc_json")
+    CLUSTER_IP=$(jq -r '.spec.clusterIP' <<<"$svc_json")
+    PORTS=$(jq -r '.spec.ports[] | "- Port: \(.port), Protocol: \(.protocol), TargetPort: \(.targetPort)"' <<<"$svc_json")
+    SELECTOR=$(jq -r '.spec.selector // {} | to_entries[] | "- \(.key): \(.value)"' <<<"$svc_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$svc_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$svc_json")
 
     local available_sections=(
         "Name"
@@ -593,8 +596,8 @@ kget_service_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select service info to display: " --header="TAB to select multiple, ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select service info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -651,15 +654,15 @@ kget_pv_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$pv_json")
-    STATUS=$(jq -r '.status.phase' <<< "$pv_json")
-    CAPACITY=$(jq -r '.spec.capacity.storage' <<< "$pv_json")
-    ACCESS_MODES=$(jq -r '.spec.accessModes[]' <<< "$pv_json" | paste -sd, -)
-    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<< "$pv_json")
-    RECLAIM_POLICY=$(jq -r '.spec.persistentVolumeReclaimPolicy' <<< "$pv_json")
-    CLAIM_REF=$(jq -r '.spec.claimRef.namespace + "/" + .spec.claimRef.name' <<< "$pv_json" 2>/dev/null || echo "None")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$pv_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$pv_json")
+    NAME=$(jq -r '.metadata.name' <<<"$pv_json")
+    STATUS=$(jq -r '.status.phase' <<<"$pv_json")
+    CAPACITY=$(jq -r '.spec.capacity.storage' <<<"$pv_json")
+    ACCESS_MODES=$(jq -r '.spec.accessModes[]' <<<"$pv_json" | paste -sd, -)
+    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<<"$pv_json")
+    RECLAIM_POLICY=$(jq -r '.spec.persistentVolumeReclaimPolicy' <<<"$pv_json")
+    CLAIM_REF=$(jq -r '.spec.claimRef.namespace + "/" + .spec.claimRef.name' <<<"$pv_json" 2>/dev/null || echo "None")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$pv_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$pv_json")
 
     local available_sections=(
         "Name"
@@ -674,8 +677,8 @@ kget_pv_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select PV info to display: " --header="TAB to select multiple, ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select PV info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -729,15 +732,15 @@ kget_pv_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$pv_json")
-    STATUS=$(jq -r '.status.phase' <<< "$pv_json")
-    CAPACITY=$(jq -r '.spec.capacity.storage' <<< "$pv_json")
-    ACCESS_MODES=$(jq -r '.spec.accessModes[]' <<< "$pv_json" | paste -sd, -)
-    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<< "$pv_json")
-    RECLAIM_POLICY=$(jq -r '.spec.persistentVolumeReclaimPolicy' <<< "$pv_json")
-    CLAIM_REF=$(jq -r '.spec.claimRef.namespace + "/" + .spec.claimRef.name' <<< "$pv_json" 2>/dev/null || echo "None")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$pv_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$pv_json")
+    NAME=$(jq -r '.metadata.name' <<<"$pv_json")
+    STATUS=$(jq -r '.status.phase' <<<"$pv_json")
+    CAPACITY=$(jq -r '.spec.capacity.storage' <<<"$pv_json")
+    ACCESS_MODES=$(jq -r '.spec.accessModes[]' <<<"$pv_json" | paste -sd, -)
+    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<<"$pv_json")
+    RECLAIM_POLICY=$(jq -r '.spec.persistentVolumeReclaimPolicy' <<<"$pv_json")
+    CLAIM_REF=$(jq -r '.spec.claimRef.namespace + "/" + .spec.claimRef.name' <<<"$pv_json" 2>/dev/null || echo "None")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$pv_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$pv_json")
 
     local available_sections=(
         "Name"
@@ -752,8 +755,8 @@ kget_pv_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select PV info to display: " --header="TAB to select multiple, ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select PV info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -809,14 +812,14 @@ kget_pvc_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$pvc_json")
-    STATUS=$(jq -r '.status.phase' <<< "$pvc_json")
-    VOLUME=$(jq -r '.spec.volumeName' <<< "$pvc_json")
-    CAPACITY=$(jq -r '.status.capacity.storage' <<< "$pvc_json")
-    ACCESS_MODES=$(jq -r '.status.accessModes[]' <<< "$pvc_json" | paste -sd, -)
-    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<< "$pvc_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$pvc_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$pvc_json")
+    NAME=$(jq -r '.metadata.name' <<<"$pvc_json")
+    STATUS=$(jq -r '.status.phase' <<<"$pvc_json")
+    VOLUME=$(jq -r '.spec.volumeName' <<<"$pvc_json")
+    CAPACITY=$(jq -r '.status.capacity.storage' <<<"$pvc_json")
+    ACCESS_MODES=$(jq -r '.status.accessModes[]' <<<"$pvc_json" | paste -sd, -)
+    STORAGE_CLASS=$(jq -r '.spec.storageClassName' <<<"$pvc_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$pvc_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$pvc_json")
 
     local available_sections=(
         "Name"
@@ -831,8 +834,8 @@ kget_pvc_info() {
     )
 
     local selected_sections
-    selected_sections=$(printf "%s\n" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select PVC info to display: " --header="TAB to select multiple, ENTER for all")
+    selected_sections=$(printf "%s\n" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select PVC info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"
@@ -888,32 +891,31 @@ kget_pods_sort_by() {
     sort_option=$(echo -e "Status\nAge Asc\nAge Desc\nName Asc\nName Desc\nrestart asc" | fzf --prompt "Sort by: ")
 
     case "$sort_option" in
-        "Status")    kubectl get po -n "$namespace" --no-headers | sort -k3 | column -t ;;
-        "Age Asc")   kubectl get po -n "$namespace" --no-headers | sort -k5n | column -t ;;
-        "Age Desc")  kubectl get po -n "$namespace" --no-headers | sort -k5nr | column -t ;;
-        "Name Asc")  kubectl get po -n "$namespace" --no-headers | sort -k1 | column -t ;;
+        "Status") kubectl get po -n "$namespace" --no-headers | sort -k3 | column -t ;;
+        "Age Asc") kubectl get po -n "$namespace" --no-headers | sort -k5n | column -t ;;
+        "Age Desc") kubectl get po -n "$namespace" --no-headers | sort -k5nr | column -t ;;
+        "Name Asc") kubectl get po -n "$namespace" --no-headers | sort -k1 | column -t ;;
         "Name Desc") kubectl get po -n "$namespace" --no-headers | sort -rk1 | column -t ;;
         "restart asc") kubectl get po -n "$namespace" --no-headers | awk '$4 != "0"' | sort -rk4 | column -t ;;
         *) echo "Invalid option selected." ;;
     esac
 }
 
-kget_pods_not_running() { 
-# kubectl get po -A | grep -v "Running\|Completed"
-  local YELLOW="\033[1;33m"
-  local RESET="\033[0m"
-  local apply_filter exclude_pattern pod_info pod_name namespace
+kget_pods_not_running() {
+    # kubectl get po -A | grep -v "Running\|Completed"
+    local YELLOW="\033[1;33m"
+    local RESET="\033[0m"
+    local apply_filter exclude_pattern pod_info pod_name namespace
 
-  read  -r -p "Exclude pods by pattern? (y/n): " apply_filter
+    read -r -p "Exclude pods by pattern? (y/n): " apply_filter
 
-  if [[ "$apply_filter" == "y" ]]; then
-    read -r -p "Pattern to exclude: " exclude_pattern
-    kubectl get pods -A --no-headers | grep -vE "Running|Completed" | grep -v "$exclude_pattern"
-  else
-    kubectl get pods -A --no-headers | grep -vE "Running|Completed"
-  fi
+    if [[ "$apply_filter" == "y" ]]; then
+        read -r -p "Pattern to exclude: " exclude_pattern
+        kubectl get pods -A --no-headers | grep -vE "Running|Completed" | grep -v "$exclude_pattern"
+    else
+        kubectl get pods -A --no-headers | grep -vE "Running|Completed"
+    fi
 }
-
 
 kget_pods_logs() {
     local YELLOW="\033[1;33m"
@@ -929,8 +931,8 @@ kget_pods_logs() {
         pod_info=$(kubectl get pods -A --no-headers | grep -vE "Running|Completed" | fzf --prompt="Select a pod: ") || return
     fi
 
-    namespace=$(awk '{print $1}' <<< "$pod_info")
-    pod_name=$(awk '{print $2}' <<< "$pod_info")
+    namespace=$(awk '{print $1}' <<<"$pod_info")
+    pod_name=$(awk '{print $2}' <<<"$pod_info")
 
     echo -e "\n${YELLOW}--- Logs for Pod: $pod_name (Namespace: $namespace) ---${RESET}"
     echo "------------------------------------------------------------------"
@@ -946,11 +948,5 @@ kget_pods_logs() {
         open_with_editor "$TMP_LOG_FILE"
     fi
 }
-
-
-
-
-
-
 
 # Include PV/PVC info

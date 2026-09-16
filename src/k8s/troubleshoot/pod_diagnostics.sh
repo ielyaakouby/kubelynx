@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # 1. Identify the Affected Pod and Namespace
 function identify_affected_pod_and_namespace() {
     namespace=$1
@@ -11,9 +13,9 @@ function identify_affected_pod_and_namespace() {
             echo -e "namespace is empty. Exiting..."
             return 1
         fi
-        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
+        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $namespace"
     fi
-    if [[ ! -z $pod_name ]]; then
+    if [[ -n $pod_name ]]; then
         echo "----------------------------------------"
         echo "Processing pod: ${pod_name}"
         echo "----------------------------------------"
@@ -54,7 +56,7 @@ function identify_affected_pod_and_namespace() {
 
 }
 
-# 2. Check Pod Details 
+# 2. Check Pod Details
 function check_pod_details() {
     namespace=$1
     pod_name=$2
@@ -65,8 +67,8 @@ function check_pod_details() {
             echo -e "namespace and/or pod name is empty. Exiting..."
             return 1
         fi
-        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
-        frame_message_1 "${GREEN}" "[✓] Selected Pod: $POD_NAME"
+        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $namespace"
+        frame_message_1 "${GREEN}" "[✓] Selected Pod: $pod_name"
     fi
     if [[ "${pod_name}" != "All Pods" ]]; then
         pod_description=$(kubectl describe pod "${pod_name}" -n "${namespace}" 2>/dev/null)
@@ -76,7 +78,7 @@ function check_pod_details() {
         fi
     fi
     pod_description_errors="$(kubectl -n "$namespace" get events --field-selector involvedObject.kind=Pod,involvedObject.name="$pod_name" -o json 2>/dev/null | jq '.items[] | select(.type != "Normal")')"
-    if [[ ! -z $pod_description_errors ]]; then
+    if [[ -n $pod_description_errors ]]; then
         echo -e "${LIGHT_RED}  [events] problem in ${pod_name} - namespace ${namespace}${RESET}"
     fi
     pod_status=$(kubectl get pod "${pod_name}" -n "${namespace}" -o jsonpath='{.status.phase}' 2>/dev/null)
@@ -97,9 +99,9 @@ function check_pod_logs() {
     pod_name=$2
 
     logs=$(kubectl logs "${pod_name}" -n "${namespace}" 2>/dev/null)
-    logs2=$(echo ${logs} | grep -Ei "Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused" > /dev/null )
+    logs2=$(echo ${logs} | grep -Ei "Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused" >/dev/null)
 
-    if echo -e "${logs}" | grep -Ei "Error|Failed|CrashLoopBackOff|OOMKilled|Connection refused" > /dev/null; then
+    if echo -e "${logs}" | grep -Ei "Error|Failed|CrashLoopBackOff|OOMKilled|Connection refused" >/dev/null; then
         echo -e "${LIGHT_RED}  [logs] Error detected in ${pod_name} - namespace ${namespace}${RESET}"
     else
         echo -e "${LIGHT_GREEN}  [logs] No errors detected in the logs for ${pod_name}. ${RESET}"
@@ -112,9 +114,9 @@ function view_pod_logs() {
     namespace=$1
 
     logs=$(kubectl logs "${pod_name}" -n "${namespace}" 2>/dev/null)
-    logs2=$(echo ${logs} | grep -Ei "Error|CrashLoopBackOff|OOMKilled|Connection refused" > /dev/null )
+    logs2=$(echo ${logs} | grep -Ei "Error|CrashLoopBackOff|OOMKilled|Connection refused" >/dev/null)
 
-    if echo -e "${logs}" | grep -Ei "Error|CrashLoopBackOff|OOMKilled|Connection refused" > /dev/null; then
+    if echo -e "${logs}" | grep -Ei "Error|CrashLoopBackOff|OOMKilled|Connection refused" >/dev/null; then
         echo -e "${LIGHT_RED}Error detected in ${pod_name} - namespace ${namespace} ${logs2} ${RESET}"
     else
         echo -e "${LIGHT_GREEN}[logs] No errors detected in the logs for ${pod_name}. ${RESET}"
@@ -134,14 +136,14 @@ function check_deployment_replica_set_stateful_set_configuration() {
         if [[ $owner_kind == "Job" ]]; then
             owner_details=$(kubectl get jobs "${owner}" -n "${namespace}" -o yaml 2>/dev/null)
         else
-                
-                owner_details=$(kubectl get deployment "${owner}" -n "${namespace}" -o yaml 2>/dev/null || \
-                                kubectl get replicaset "${owner}" -n "${namespace}" -o yaml 2>/dev/null || \
-                                kubectl get statefulset "${owner}" -n "${namespace}" -o yaml 2>/dev/null)
 
-                if [[ -z "${owner_details}" ]]; then
-                    echo -e "${LIGHT_RED}[check resource config] Failed to retrieve details for ${owner} in namespace ${namespace}. ${RESET}"
-                fi
+            owner_details=$(kubectl get deployment "${owner}" -n "${namespace}" -o yaml 2>/dev/null \
+                || kubectl get replicaset "${owner}" -n "${namespace}" -o yaml 2>/dev/null \
+                || kubectl get statefulset "${owner}" -n "${namespace}" -o yaml 2>/dev/null)
+
+            if [[ -z "${owner_details}" ]]; then
+                echo -e "${LIGHT_RED}[check resource config] Failed to retrieve details for ${owner} in namespace ${namespace}. ${RESET}"
+            fi
         fi
     fi
 
@@ -195,19 +197,19 @@ function check_node_status_and_resources() {
         fi
         frame_message "${GREEN}" "Selected node_name : $namespace"
     fi
-    
+
     node_details=$(kubectl describe node "${node_name}" 2>/dev/null)
-    node_details2=$(echo $node_details | grep -Ei "MemoryPressure|DiskPressure|PIDPressure"  2>/dev/null)
-    
+    node_details2=$(echo $node_details | grep -Ei "MemoryPressure|DiskPressure|PIDPressure" 2>/dev/null)
+
     if [[ -z "${node_details}" ]]; then
         echo -e "${LIGHT_RED}  [check node status] Failed to retrieve details for node ${node_name}. ${RESET}"
-        if echo -e "${node_details2}" | grep -Ei "MemoryPressure|DiskPressure|PIDPressure" > /dev/null; then
+        if echo -e "${node_details2}" | grep -Ei "MemoryPressure|DiskPressure|PIDPressure" >/dev/null; then
             echo -e "${LIGHT_RED}  [check node status] Node ${node_name} is experiencing resource pressure. Investigate further.\n Node details for ${node_name} ${RESET}"
         else
             echo -e "${LIGHT_GREEN}[check node status] Node resources appear normal. Checking liveness/readiness probes... ${RESET}"
         fi
     fi
-    verify_liveness_readiness_probes "${namespace}" "${pod_name}"    
+    verify_liveness_readiness_probes "${namespace}" "${pod_name}"
 }
 
 # 7. Verify Liveness/Readiness Probes
@@ -232,7 +234,7 @@ function verify_liveness_readiness_probes() {
             pod_description_readiness_failed=$(echo "$pod_description" | grep -i "Readiness probe failed" 2>/dev/null)
             if [[ -n "$pod_description_readiness_failed" ]]; then
                 echo "  [check readiness] Readiness probe failed in pod ${pod_name}"
-                
+
             fi
         fi
     else
@@ -246,7 +248,7 @@ function inspect_application_configuration_and_dependencies() {
     pod_name=$2
     namespace=$1
 
-    check_ingress_configuration "${namespace}" "${pod_name}" 
+    check_ingress_configuration "${namespace}" "${pod_name}"
 }
 
 # 9. Check Ingress Configuration
@@ -260,8 +262,8 @@ function check_ingress_configuration() {
     else
         for ingress in $(kubectl get ingress -n "${namespace}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
             ingress_details=$(kubectl describe ingress "${ingress}" -n "${namespace}" 2>/dev/null)
-            
-            if echo -e "${ingress_details}" | grep -Ei "Host not found|Timeout|Connection refused" > /dev/null; then
+
+            if echo -e "${ingress_details}" | grep -Ei "Host not found|Timeout|Connection refused" >/dev/null; then
                 echo -e "${LIGHT_RED}  [check ingress] Ingress issue detected. Please check ingress rules, service backend, and DNS settings. ${RESET}"
             fi
         done
@@ -357,7 +359,7 @@ check_pod_network_issues() {
 
     if kubectl exec -it "$pod_name" -n "$namespace" -- sh -c "ls / > /dev/null 2>&1" 2>/dev/null; then
         response_code=$(kubectl exec -it "$pod_name" -n "$namespace" -- curl -s -o /dev/null -w "%{http_code}" "$target_url" 2>/dev/null)
-        
+
         if [[ "$response_code" != "200" ]]; then
             echo -e "${LIGHT_RED}  [check network issues] Network issue detected. Response code: ${response_code}. Please check network policies. ${RESET}"
         else
@@ -368,7 +370,6 @@ check_pod_network_issues() {
     fi
 }
 
-
 # 12. Monitor the Pod After Fixing Issues
 function monitor_pod_after_applying_fixes() {
     namespace=$1
@@ -378,12 +379,10 @@ function monitor_pod_after_applying_fixes() {
             echo -e "namespace is empty. Exiting..."
             return 1
         fi
-        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
+        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $namespace"
     fi
     kubectl get pods -n "${namespace}" -w 2>/dev/null
 }
-
-
 
 select_action_menu() {
     local pod_name=$2
@@ -394,11 +393,11 @@ select_action_menu() {
             echo -e "namespace name is empty. Exiting..."
             return 1
         fi
-        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
+        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $namespace"
     fi
     GREEN='\033[0;32m'
     RED='\033[0;31m'
-    NC='\033[0m'  # No Color
+    NC='\033[0m' # No Color
 
     while true; do
         options=(
@@ -412,11 +411,11 @@ select_action_menu() {
             "Monitor Pod After Applying Fixes"
             "Quit"
         )
-        selected_action=$(printf "%s\n" "${options[@]}" | \
-                                        fzf --prompt="Select an option: " \
-                                            --header="" \
-                                            --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,header:#FFFFFF,prompt:#FFD700" \
-                                            --height=50%)
+        selected_action=$(printf "%s\n" "${options[@]}" \
+            | fzf --prompt="Select an option: " \
+                --header="" \
+                --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,header:#FFFFFF,prompt:#FFD700" \
+                --height=50%)
         if [ "$selected_action" == "Exit" ]; then
             frame_message "${GREEN}" "Exiting the menu \"select action menu\""
             break
@@ -444,7 +443,7 @@ select_action_menu() {
             "Monitor Pod After Applying Fixes")
                 monitor_pod_after_applying_fixes "${namespace}"
                 ;;
-            "Quit"|q|Q|8)
+            "Quit" | q | Q | 8)
                 echo -e "Exiting..."
                 break
                 ;;

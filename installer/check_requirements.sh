@@ -1,64 +1,67 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Check KubeLynx prerequisites.
+# Runtime tools are required to use the CLI.
+# Optional tools enable extra features and are never fatal.
+
+set -euo pipefail
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
-run_with_spinner_and_dots() {
-    local label="$1"
-    local command="$2"
-    local total_width=60
-    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    local delay=0.1
-    local i=0
+missing_required=0
+missing_optional=0
 
-    bash -c "$command" &>/dev/null &
-    local pid=$!
-
-    while kill -0 $pid 2>/dev/null; do
-        i=$(( (i + 1) % ${#spin} ))
-        printf "\r%s %s..." "${spin:$i:1}" "$label"
-        sleep $delay
-    done
-
-    wait $pid
-    local exit_code=$?
-
-    local spacing=$(( total_width - ${#label} - 7 ))
-    local dots=""
-    for ((j = 0; j < spacing; j++)); do
-        dots+="."
-    done
-
-    if [ $exit_code -eq 0 ]; then
-        printf "\r${GREEN}[✓] %s%s done${NC}\n" "$label" "$dots"
-    else
-        printf "\r${RED}❌ [FAIL]  %s%s failed${NC}\n" "$label" "$dots"
+check_cmd() {
+    local cmd="$1"
+    local kind="$2"
+    local note="${3:-}"
+    if command -v "$cmd" >/dev/null 2>&1; then
+        printf "${GREEN}[OK]${NC}   %-16s %s\n" "$cmd" "${note}"
+        return 0
     fi
-
-    return $exit_code
+    if [[ "$kind" == "required" ]]; then
+        printf "${RED}[FAIL]${NC} %-16s missing (required)\n" "$cmd"
+        missing_required=1
+    else
+        printf "${YELLOW}[WARN]${NC} %-16s missing (optional%s)\n" "$cmd" "${note:+: ${note}}"
+        missing_optional=1
+    fi
+    return 1
 }
 
-check_all_commands() {
-    local missing=()
-    local required=(git curl bash gnome-terminal fzf)
+echo "KubeLynx prerequisite check"
+echo
 
-    run_with_spinner_and_dots "Checking required commands" "sleep 1"
+echo "Runtime requirements"
+check_cmd bash "required"
+check_cmd kubectl "required"
+check_cmd fzf "required"
+check_cmd jq "required"
+echo
 
-    for cmd in "${required[@]}"; do
-        if ! run_with_spinner_and_dots "$cmd" "command -v $cmd"; then
-            missing+=("$cmd")
-        fi
-    done
+echo "Optional runtime features"
+check_cmd curl "optional" "connectivity checks and AI providers"
+check_cmd gnome-terminal "optional" "open some actions in a new window"
+echo
 
-    echo
+echo "Installation and update"
+check_cmd git "optional" "clone-based install and git updates"
+check_cmd tar "optional" "release archive extraction"
+echo
 
-    if [ ${#missing[@]} -ne 0 ]; then
-        printf "${RED}❌ [FAIL]  Missing command(s): ${missing[*]}${NC}\n"
-        exit 1
-    else
-        printf "${GREEN}✅ [OK]    All required commands are installed.${NC}\n"
-    fi
-}
+if [[ "$missing_required" -ne 0 ]]; then
+    printf '%b[FAIL]%b Missing required commands. Install them and re-run this check.\n' "$RED" "$NC"
+    exit 1
+fi
 
-check_all_commands
+if [[ "$missing_optional" -ne 0 ]]; then
+    printf '%b[INFO]%b Optional tools are missing. KubeLynx will still run; related features will be skipped.\n' "$YELLOW" "$NC"
+else
+    printf '%b[OK]%b   All required and optional commands are available.\n' "$GREEN" "$NC"
+fi
+
+exit 0

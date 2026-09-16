@@ -1,6 +1,38 @@
+# Temporary and backup files
 *.swp
+*.swo
+*~
 *.tmp
 *.bak
+*.orig
 .DS_Store
-**/tmp/
+
+# Editor and IDE metadata
+.idea/
+.vscode/
+*.code-workspace
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig
+kubeconfig.*
+
+# Local override files
+config/local.sh
+config/local.d/
+
+# Test and packaging output
+/tmp/
 **/.cache/
+/dist/
+/build/
+/coverage/
+tests/out/
+
+# Shell / OS noise
+.bash_history
+Thumbs.db

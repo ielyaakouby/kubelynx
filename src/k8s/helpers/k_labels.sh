@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 new_get_pod_labels() {
     NAMESPACE="$1"
 
@@ -68,9 +71,9 @@ kubectl_get_labels() {
     echo -e "${GREEN}Fetching labels for resource: $resource_name in namespace: $NAMESPACE...${RESET}"
 
     # Fetching labels and formatting output
-    labels_output=$(kubectl -n "$NAMESPACE" get "$resource_name" -o yaml 2>/dev/null | 
-        kubectl neat | 
-        yq -r '.metadata.labels')
+    labels_output=$(kubectl -n "$NAMESPACE" get "$resource_name" -o yaml 2>/dev/null \
+        | kubectl neat \
+        | yq -r '.metadata.labels')
 
     if [[ -z "$labels_output" ]]; then
         echo -e "${GREEN}No labels found for the resource.${RESET}"

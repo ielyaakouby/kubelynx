@@ -1,0 +1,4 @@
+# Project-wide ShellCheck settings. This file does not disable warning codes.
+shell=bash
+external-sources=true
+source-path=SCRIPTDIR

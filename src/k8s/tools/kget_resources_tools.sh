@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # Display pods by status
 
 display_pods() {
@@ -10,8 +12,8 @@ display_pods() {
 
     case "$status" in
         Not_Running) pods_output=$(kubectl get pods "$namespace_option" --no-headers 2>/dev/null | grep -vE "Running|Completed") ;;
-        All)         pods_output=$(kubectl get pods "$namespace_option" --no-headers 2>/dev/null) ;;
-        *)           pods_output=$(kubectl get pods "$namespace_option" --no-headers 2>/dev/null | grep "$status") ;;
+        All) pods_output=$(kubectl get pods "$namespace_option" --no-headers 2>/dev/null) ;;
+        *) pods_output=$(kubectl get pods "$namespace_option" --no-headers 2>/dev/null | grep "$status") ;;
     esac
 
     [[ -n "$pods_output" ]] && echo -e "${CYAN}\nPods with ${status} status:${RESET}\n"
@@ -43,8 +45,6 @@ display_pods() {
         done
     fi
 }
-
-
 
 # Get detailed Pod status
 
@@ -86,11 +86,10 @@ kget_pod_status() {
         echo -e "    Started:   $([[ "$container_started" == "true" ]] && echo "${COLOR_GREEN}Yes${COLOR_RESET} (${container_started_at})" || echo "${COLOR_RED}No${COLOR_RESET}")"
         echo -e "    Restarts:  ${container_restart_count}"
         [[ -n "$container_unready_reason" ]] && echo -e "    Reason:    ${COLOR_YELLOW}${container_unready_reason}${COLOR_RESET}"
-    done <<< "$container_statuses"
+    done <<<"$container_statuses"
 
     echo
 }
-
 
 # Get pods list sorted by age
 
@@ -100,7 +99,6 @@ get_pods_list_sort_by_age() {
     echo -e "${GREEN}[✓] Selected Namespace: ${YELLOW}$namespace${RESET}\n"
     kubectl get pods -n "$namespace" --sort-by='.metadata.creationTimestamp' 2>/dev/null
 }
-
 
 # General pods listing and filtering
 
@@ -141,7 +139,6 @@ get_pods_list_by_status() {
     echo
 }
 
-
 # Filtered resources
 
 kget_filtered_resources() {
@@ -171,7 +168,6 @@ kget_filtered_resources() {
         echo -e "  └──────────────────────────────────────────────────────"
     done
 }
-
 
 # Resource filtering by Label/Annotation/EmptyDir
 
@@ -210,7 +206,6 @@ kget_resources_filter_by() {
         kget_resources_filter_by_annotation_name "$resource" "$filter"
     fi
 }
-
 
 # Count Kubernetes Resources
 
@@ -258,8 +253,6 @@ kget_resource_total() {
     printf "%-25s %d\n" "Total" "$total"
 }
 
-
 # End
-
 
 # Wide output support

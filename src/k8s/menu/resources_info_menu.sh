@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 resource_info_and_inspect_menu_() {
     while true; do
         local options=(
@@ -13,8 +16,8 @@ resource_info_and_inspect_menu_() {
         )
 
         local selected_action
-        selected_action=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Main Menu ❯ Kube Info ❯ " \
+        selected_action=$(printf "%s\n" "${options[@]}" \
+            | fzf --prompt="Main Menu ❯ Kube Info ❯ " \
                 --border=rounded \
                 --no-mouse \
                 --border-label="🩺 Kubernetes doctor 🩺" \
@@ -25,7 +28,7 @@ resource_info_and_inspect_menu_() {
 
         case "$selected_action" in
             *"Go Back") return 0 ;;
-            *"Go Home") menu::select_main_action;;
+            *"Go Home") menu::select_main_action ;;
             *"Ingress Info") submenu_ingress_info ;;
             *"Pod Info") submenu_pod_info ;;
             *"Config & Secrets") submenu_config_secret ;;
@@ -44,19 +47,19 @@ submenu_ingress_info() {
         "↪ Ingress: by namespace + name"
         "↪ Ingress: by URL/host"
     )
-    local choice=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Ingress Info ❯ " \
-                --border=rounded \
-                --no-mouse \
-                --border-label="🩺 Kubernetes doctor 🩺" \
-                --height=32% \
-                --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
+    local choice=$(printf "%s\n" "${options[@]}" \
+        | fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Ingress Info ❯ " \
+            --border=rounded \
+            --no-mouse \
+            --border-label="🩺 Kubernetes doctor 🩺" \
+            --height=32% \
+            --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
 
     case "$choice" in
         *"Go Back") return ;;
         *"Ingress: all") ok_kget_ingress_info all ;;
         *"Ingress: by namespace + name")
-            ensure_ingresse_and_namespace || continue
+            ensure_ingresse_and_namespace || return 1
             ok_kget_ingress_info "$NAMESPACE" "$INGRESSE_NAME"
             ;;
         *"Ingress: by URL"*)
@@ -77,13 +80,13 @@ submenu_pod_info() {
         "✚ Pod's corresponding service"
         "✚ Pod labels"
     )
-    local choice=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Pod Info ❯ " \
-                --border=rounded \
-                --no-mouse \
-                --border-label="🩺 Kubernetes doctor 🩺" \
-                --height=32% \
-                --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
+    local choice=$(printf "%s\n" "${options[@]}" \
+        | fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Pod Info ❯ " \
+            --border=rounded \
+            --no-mouse \
+            --border-label="🩺 Kubernetes doctor 🩺" \
+            --height=32% \
+            --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
 
     case "$choice" in
         *"Go Back") return ;;
@@ -110,13 +113,13 @@ submenu_config_secret() {
         "✚ Get configmap content"
         "✚ Get secret content"
     )
-    local choice=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Config & Secrets ❯ " \
-                --border=rounded \
-                --no-mouse \
-                --border-label="🩺 Kubernetes doctor 🩺" \
-                --height=32% \
-                --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
+    local choice=$(printf "%s\n" "${options[@]}" \
+        | fzf --prompt="Main Menu ❯ Kube Info Menu ❯ Config & Secrets ❯ " \
+            --border=rounded \
+            --no-mouse \
+            --border-label="🩺 Kubernetes doctor 🩺" \
+            --height=32% \
+            --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
 
     case "$choice" in
         *"Go Back") return ;;
@@ -134,8 +137,8 @@ submenu_cluster_info() {
         )
 
         local choice
-        choice=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt=" 🌟  Main Menu ➔ Kube Info Menu ➔ Cluster Info ➔ " \
+        choice=$(printf "%s\n" "${options[@]}" \
+            | fzf --prompt=" 🌟  Main Menu ➔ Kube Info Menu ➔ Cluster Info ➔ " \
                 --header="   ➔ Kubernetes Cluster Info - Select an action" \
                 --height=50% \
                 --border=rounded \
@@ -161,8 +164,8 @@ submenu_namespace_labels() {
         )
 
         local selected
-        selected=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Namespace & Labels ❯ " --border=rounded --no-mouse --border-label="🩺 Kubernetes doctor 🩺" --height=32% --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
+        selected=$(printf "%s\n" "${options[@]}" \
+            | fzf --prompt="Namespace & Labels ❯ " --border=rounded --no-mouse --border-label="🩺 Kubernetes doctor 🩺" --height=32% --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
 
         [[ -z "$selected" ]] && frame_message "$RED" "No selection made." && continue
 

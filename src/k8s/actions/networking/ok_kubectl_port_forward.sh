@@ -1,5 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 kube_port_forward_pod() {
     local namespace pod local_port remote_port ports
     namespace=$(select_namespace) || return
@@ -35,7 +38,10 @@ ok_kubectl_port_forward() {
     case "$choice" in
         *Pod*) kube_port_forward_pod ;;
         *Service*) kube_port_forward_service ;;
-        *Quit*) echo "Bye 👋"; exit 0 ;;
+        *Quit*)
+            echo "Bye 👋"
+            exit 0
+            ;;
         *) frame_message "$RED" "❌ Invalid choice." ;;
     esac
 }
@@ -118,14 +124,13 @@ get_node_events() {
             ;;
         "New Terminal")
             echo -e "${GREEN}Opening events in new terminal...${NC}\n"
-            gnome-terminal --geometry=180x45 -- bash -c "
+            kubelynx::run_in_new_terminal "Node events: $node_name" "
                 while true; do
                     echo \"----- \$(date) -----\"
                     kubectl describe node '$node_name' 2>/dev/null | awk '/Events:/,/^$/'
                     sleep 5
                 done
                 exec bash"
-
             ;;
         *)
             echo "Invalid choice. Exiting..."

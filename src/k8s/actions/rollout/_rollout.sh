@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # Spinner wrapper with status output
 check_snipp() {
     local message="$1"
@@ -18,7 +21,7 @@ check_snipp() {
         done
     }
 
-    eval "$command" &>/dev/null &
+    bash -c "$command" &>/dev/null &
     local pid=$!
     spinner "$pid" &
     local spin_pid=$!
@@ -40,7 +43,10 @@ check_snipp() {
 kube_confirm_rollout() {
     local type="$1" name="$2" ns="$3"
     read -rp $'\e[1;31m➤ Are you sure you want to restart the '"\"$type\" \"$name\" in namespace \"$ns\""'? (y/n): \e[0m' confirm
-    [[ "$confirm" =~ ^[Yy]$ ]] || { echo "❌ Rollout cancelled."; return 1; }
+    [[ "$confirm" =~ ^[Yy]$ ]] || {
+        echo "❌ Rollout cancelled."
+        return 1
+    }
     echo
     echo "[✓] Restarting $type \"$name\" in namespace \"$ns\""
     if kubectl rollout restart "$type" "$name" -n "$ns"; then
@@ -126,8 +132,8 @@ kube_restart_deployment() {
 
     if [[ "$ns" == "all" ]]; then
         line=$(select_resource_global "deployment") || return
-        ns=$(awk '{print $1}' <<< "$line")
-        deploy=$(awk '{print $2}' <<< "$line")
+        ns=$(awk '{print $1}' <<<"$line")
+        deploy=$(awk '{print $2}' <<<"$line")
     else
         deploy=$(select_deployment "$ns") || return
     fi
@@ -148,12 +154,12 @@ select_resource_global() {
 
     local line
     line=$(kubectl get "$resource_type" --all-namespaces \
-        -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" --no-headers | \
-        fzf --prompt "$prompt ") || return 1
+        -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name" --no-headers \
+        | fzf --prompt "$prompt ") || return 1
 
     local ns name
-    ns=$(awk '{print $1}' <<< "$line")
-    name=$(awk '{print $2}' <<< "$line")
+    ns=$(awk '{print $1}' <<<"$line")
+    name=$(awk '{print $2}' <<<"$line")
 
     echo "$ns;$name"
 }
@@ -242,7 +248,6 @@ kube_rollback_deployment() {
     fi
 }
 
-
 kube_rollout_history() {
     local ns=$(select_namespace) || return
     local deploy=$(select_deployment "$ns") || return
@@ -260,7 +265,7 @@ kube_rollout_history() {
     local pid=$!
 
     while kill -0 "$pid" 2>/dev/null; do
-        i=$(( (i+1) % ${#spin} ))
+        i=$(((i + 1) % ${#spin}))
         printf "\r%s %s..." "${spin:$i:1}" "$message"
         sleep "$delay"
     done
@@ -281,6 +286,5 @@ kube_rollout_history() {
         return 1
     fi
 }
-
 
 # Rollout history display

@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 #ActiveJobNmae="$(kubectl -n logging  describe cronjobs.batch  fluentd-cleanup | grep "Active Jobs:" | awk '{print $3}')"
 #
-#kubectl -n logging  describe jobs.batch "$(kubectl -n logging  describe cronjobs.batch  fluentd-cleanup | grep "Active Jobs:" | awk '{print $3}')" 
+#kubectl -n logging  describe jobs.batch "$(kubectl -n logging  describe cronjobs.batch  fluentd-cleanup | grep "Active Jobs:" | awk '{print $3}')"
 #
 #owner_details=$(kubectl get jobs "${owner}" -n "${namespace}" -o yaml 2>/dev/null)
 #
@@ -26,7 +29,7 @@ describe_job() {
 }
 
 format_datetime() {
-  date -d "${1/Z/}" +"%d-%m-%Y at %H:%M:%S"
+    date -d "${1/Z/}" +"%d-%m-%Y at %H:%M:%S"
 }
 
 cronjob_troubleshooting_kget_pod_info() {
@@ -39,7 +42,7 @@ cronjob_troubleshooting_kget_pod_info() {
             echo -e "namespace and/or pod name is empty. Exiting..."
             return 1
         fi
-        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
+        frame_message_1 "${GREEN}" "[✓] Selected Namespace: $namespace"
         frame_message_1 "${GREEN}" "[✓] Selected Pod: $pod_name"
     fi
     pod_json=$(kubectl get pod "$pod_name" -n "$namespace" -o json 2>/dev/null)
@@ -56,7 +59,7 @@ cronjob_troubleshooting_kget_pod_info() {
         STATUS=$(echo "$pod_json" | jq -r '.status.phase')
         RESTARTS=$(echo "$pod_json" | jq -r '.status.containerStatuses | map(.restartCount) | add')
         pod_errors="$(kubectl -n $namespace logs $pod_name 2>/dev/null | grep -Ei "Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")"
-        IFS='/' read -r readyCount totalCount <<< "$READY"
+        IFS='/' read -r readyCount totalCount <<<"$READY"
         if [[ "$readyCount" -ne "$totalCount" || "$STATUS" != "Running" ]]; then
             STATUS="            🔴 Pod is not fully ready or not running, and has restarts."
             status_msg_ko="            │Check for issues."
@@ -64,10 +67,10 @@ cronjob_troubleshooting_kget_pod_info() {
             STATUS="            🟢 Pod is fully ready and running."
             status_msg_ok="            │ All systems go!"
         fi
-        CONTAINER_STATUS=$(kubectl get pod "$pod_name" -n "$namespace" -o json 2>/dev/null | \
-        jq -r '.status.containerStatuses[] |
-        "Name: \(.name), State: \(.state | to_entries | map("\(.key): \(.value.reason // "running")") | join(", ")), Ready: \(.ready)"' | \
-        sed 's/^/  /')
+        CONTAINER_STATUS=$(kubectl get pod "$pod_name" -n "$namespace" -o json 2>/dev/null \
+            | jq -r '.status.containerStatuses[] |
+        "Name: \(.name), State: \(.state | to_entries | map("\(.key): \(.value.reason // "running")") | join(", ")), Ready: \(.ready)"' \
+            | sed 's/^/  /')
         RESTART_COUNT=$(echo "$pod_json" | jq -r '.status.containerStatuses[] | .restartCount' | awk '{sum+=$1} END {print sum}')
         IMAGE=$(echo "$pod_json" | jq -r '.spec.containers[] | "\(.name) -> image: \(.image)"')
         KIND=$(kubectl get pod "$pod_name" -n "$namespace" -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null)
@@ -123,7 +126,7 @@ cronjob_troubleshooting_kget_pod_info() {
     if [[ -z "$CONTAINER_STATUS" ]]; then
         echo -e "   ${LIGHT_YELLOW}          │├ None${RESET}"
     else
-        echo "$CONTAINER_STATUS"  | while read -r line; do
+        echo "$CONTAINER_STATUS" | while read -r line; do
             echo -e "${LIGHT_YELLOW}             │├ $line" #| column -t
         done
     fi
@@ -169,12 +172,11 @@ cronjob_troubleshooting_kget_pod_info() {
     fi
 }
 
-
 get_cronjob_details() {
     local namespace="$1"
     local cronjob_name="$2"
 
-    local COLOR_SOPHISTICATED="\e[1;34m"  # Bright Blue (you can change this to any color you prefer)
+    local COLOR_SOPHISTICATED="\e[1;34m" # Bright Blue (you can change this to any color you prefer)
     local COLOR_RESET="\e[0m"
     local cronjob_json=$(kubectl -n "$namespace" get cronjob "$cronjob_name" -o json 2>/dev/null)
 
@@ -193,7 +195,7 @@ get_cronjob_details() {
     local formatted_last_schedule_time=$(format_datetime "$last_schedule_time")
     local formatted_last_successful_time=$(format_datetime "$last_successful_time")
     local job_template_labels=$(echo "$cronjob_json" | jq -r '.spec.jobTemplate.spec.template.metadata.labels // "No labels" | to_entries | map("\(.key): \(.value)") | .[]')
-    
+
     local creation_timestamp=$(echo "$cronjob_json" | jq -r '.metadata.creationTimestamp')
 
     echo -e "${COLOR_SOPHISTICATED}       CronJob Name: $cronjob_name${COLOR_RESET}"
@@ -203,20 +205,18 @@ get_cronjob_details() {
     echo -e "${COLOR_SOPHISTICATED}       Last Scheduled Time: $formatted_last_schedule_time${COLOR_RESET}"
     echo -e "${COLOR_SOPHISTICATED}       Last Successful Time: $formatted_last_successful_time${COLOR_RESET}"
 
-
-
     echo -e "${COLOR_SOPHISTICATED}       Service Account Name: $service_account_name${COLOR_RESET}"
     echo -e "${COLOR_SOPHISTICATED}       Image: $image${COLOR_RESET}"
-    
+
     if [[ -n "$job_template_labels" ]]; then
         echo -e "${COLOR_SOPHISTICATED}       Job Template Labels:${COLOR_RESET}"
-        echo "$job_template_labels" | sed 's/^/         /'  # Indent labels for better readability
+        echo "$job_template_labels" | sed 's/^/         /' # Indent labels for better readability
     else
         echo -e "${COLOR_SOPHISTICATED}       Job Template Labels: No labels${COLOR_RESET}"
     fi
-    
+
     echo -e "${COLOR_SOPHISTICATED}       Creation Timestamp: $creation_timestamp${COLOR_RESET}"
-    #echo -e "${COLOR_SOPHISTICATED}Command:${COLOR_RESET}"   
+    #echo -e "${COLOR_SOPHISTICATED}Command:${COLOR_RESET}"
     #if [ -n "$command" ]; then
     #    echo "------"
     #    echo "$command" #| boxes -d stone -p a1
@@ -225,7 +225,6 @@ get_cronjob_details() {
     #    echo -e "${COLOR_SOPHISTICATED}Command: Not specified${COLOR_RESET}"
     #fi
 }
-
 
 get_associated_job_events_ok() {
     local namespace="$1"
@@ -263,15 +262,15 @@ get_associated_pods() {
     if [[ "$pods_failed" == "" ]]; then
         echo "         └│ No Pods found for Job '$job_name' in namespace '$namespace'."
     else
-        echo "         └│ Pods associated with Job '$job_name' in namespace '$namespace':\n"
+        printf "         └│ Pods associated with Job '%s' in namespace '%s':\n" "$job_name" "$namespace"
         for pod_name in $(echo "$pods_failed" | tr ' ' '\n'); do
             #echo -e "          ├ $pod_name"
             echo -e "\n            ═══════════════════ $pod_name ════════════"
             cronjob_troubleshooting_kget_pod_info $namespace $pod_name
             echo -e "\n            └│ Events for pod $pod_name"
-                get_events_by_resource_type_and_resource_name "$namespace" "Pod" "$pod_name" | while read -r log; do
-                    echo "$log" | sed 's/^/             │/'
-                done
+            get_events_by_resource_type_and_resource_name "$namespace" "Pod" "$pod_name" | while read -r log; do
+                echo "$log" | sed 's/^/             │/'
+            done
         done
     fi
 }
@@ -322,7 +321,7 @@ get_job_details() {
         local name=$(echo "$container" | jq -r '.name // "N/A"')
         local image=$(echo "$container" | jq -r '.image // "N/A"')
         #local command=$(echo "$container" | jq -r '.command | join(" ") // "N/A"')
-        if echo "$container" | jq -e '.args' > /dev/null; then
+        if echo "$container" | jq -e '.args' >/dev/null; then
             local args=$(echo "$container" | jq -r '.args | join(" ")')
         else
             local args=""
@@ -345,7 +344,7 @@ get_job_details() {
                 echo -e "         ${GREEN}- Args:${NC}"
 
                 output=""
-                IFS=' ' read -r -a arg_array <<< "$args"
+                IFS=' ' read -r -a arg_array <<<"$args"
 
                 line=""
                 for arg in "${arg_array[@]}"; do
@@ -370,10 +369,10 @@ get_associated_job_name() {
     local namespace="$1"
     local job_template_labels="$(echo "$2" | sed 's/: /=/g')"
     local output_mode="$3"
-    local color_success="\033[32m"  # Green for success
-    local color_warning="\033[33m"  # Yellow for warnings
-    local color_error="\033[31m"    # Red for errors
-    local color_reset="\033[0m"     # Reset color
+    local color_success="\033[32m" # Green for success
+    local color_warning="\033[33m" # Yellow for warnings
+    local color_error="\033[31m"   # Red for errors
+    local color_reset="\033[0m"    # Reset color
     local icon_info="ℹ️"
     local icon_warning="⚠️"
     local icon_error="❌"
@@ -424,7 +423,7 @@ get_associated_job_name() {
 kget_cronjob_details2() {
     local namespace="$1"
     local cronjob_name="$2"
-    
+
     if [[ -z "$namespace" ]]; then
         namespace=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' 2>/dev/null | tr ' ' '\n' | fzf --prompt="Select a namespace: ")
         if [[ -z "$namespace" ]]; then
@@ -439,23 +438,23 @@ kget_cronjob_details2() {
             return 1
         fi
     fi
-    
+
     # step 1 get_cronjob_details
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
     echo "   [step 1] CronJob details of \"$cronjob_name\""
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
     get_cronjob_details $namespace $cronjob_name
-    
+
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
     echo "   [step 2] CronJob Event of \"$cronjob_name\""
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
     get_events_by_resource_type_and_resource_name "$namespace" "CronJob" "$cronjob_name"
     # step 2 get get_associated_job_name
-    
+
     local cronjob_json=$(kubectl -n "$namespace" get cronjob "$cronjob_name" -o json 2>/dev/null)
     local job_template_labels=$(echo "$cronjob_json" | jq -r '.spec.jobTemplate.spec.template.metadata.labels // "No labels" | to_entries | map("\(.key): \(.value)") | .[]')
     local cronjob_job_template_name="$(echo $job_template_labels | awk '{print $2}')"
-    
+
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
     echo "   [step 3] Jobs associated to CronJob (status) $cronjob_name"
     echo "   ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤"
@@ -491,8 +490,8 @@ kget_cronjob_details() {
 
         kind_name="$(kubectl -n $namespace get jobs.batch $job_name -o json | jq -r '.metadata.ownerReferences[].name')"
         if [[ $kind_name == "CronJob" ]]; then
-           cronjob_name="$kind_name"
-           kget_cronjob_details2 $namespace $cronjob_name
+            cronjob_name="$kind_name"
+            kget_cronjob_details2 $namespace $cronjob_name
         else
             echo -e "   the owner is not a cronjob\n"
             #exit 0

@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 get_logs_without_error_filtering_() {
     local NAMESPACE="${1:-}"
     local POD_NAME="${2:-}"
@@ -8,7 +11,7 @@ get_logs_without_error_filtering_() {
     status="$?"
     if [[ "$status" -eq 0 ]]; then
         check_pod_status_for_logs "$POD_NAME" "$NAMESPACE" || return 1
-        gnome-terminal --title="Logs - pod - $POD_NAME -namespace $NAMESPACE" --geometry=180x45 --tab -- bash -c "kubectl logs $POD_NAME -n $NAMESPACE -f 2>/dev/null && echo ""; read"
+        kubelynx::run_in_new_terminal "Logs - $POD_NAME ($NAMESPACE)" "kubectl logs \"$POD_NAME\" -n \"$NAMESPACE\" -f 2>/dev/null; echo; read"
     else
         echo "Failed to ensure pod and namespace."
         return 1
@@ -42,20 +45,35 @@ get_logs_without_error_filtering() {
     fi
 
     local choice
-    choice=$(echo -e "[1] Terminal (current window)\n[2] gnome-terminal (new window)\n[3] Open in Kate\n[4] Open in VS Code\n[5] Open in Sublime Text\n[6] Save to temporary file" | \
-        fzf --prompt="[>] Choose how to view the logs: ")
+    choice=$(echo -e "[1] Terminal (current window)\n[2] gnome-terminal (new window)\n[3] Open in Kate\n[4] Open in VS Code\n[5] Open in Sublime Text\n[6] Save to temporary file" \
+        | fzf --prompt="[>] Choose how to view the logs: ")
 
     case "$choice" in
         "[1]"*) echo "$log_content" ;;
-        "[2]"*) gnome-terminal --title="Logs - $POD_NAME - $NAMESPACE" --geometry=180x45 -- bash -c "kubectl logs $POD_NAME -n $NAMESPACE -f; echo ''; read" ;;
-        "[3]"*) tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log"); echo "$log_content" > "$tmpfile"; kate "$tmpfile" & ;;
-        "[4]"*) tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log"); echo "$log_content" > "$tmpfile"; code "$tmpfile" ;;
-        "[5]"*) tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log"); echo "$log_content" > "$tmpfile"; subl "$tmpfile" ;;
-        "[6]"*) tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log"); echo "$log_content" > "$tmpfile"; echo "[✓] Logs saved in: $tmpfile" ;;
+        "[2]"*) kubelynx::run_in_new_terminal "Logs - $POD_NAME - $NAMESPACE" "kubectl logs \"$POD_NAME\" -n \"$NAMESPACE\" -f; echo ''; read" ;;
+        "[3]"*)
+            tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log")
+            echo "$log_content" >"$tmpfile"
+            kate "$tmpfile" &
+            ;;
+        "[4]"*)
+            tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log")
+            echo "$log_content" >"$tmpfile"
+            code "$tmpfile"
+            ;;
+        "[5]"*)
+            tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log")
+            echo "$log_content" >"$tmpfile"
+            subl "$tmpfile"
+            ;;
+        "[6]"*)
+            tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}.log")
+            echo "$log_content" >"$tmpfile"
+            echo "[✓] Logs saved in: $tmpfile"
+            ;;
         *) echo "[!] No valid option selected." ;;
     esac
 }
-
 
 get_logs_with_error_filtering() {
     local NAMESPACE="${1:-}"
@@ -83,24 +101,27 @@ get_logs_with_error_filtering() {
         "[3]"*) pattern="info|information" ;;
         "[4]"*) pattern="error|exception|failed|fatal|crash|panic|warning|warn|alert|info|information" ;;
         "[5]"*) read -r -p "[?] Enter your custom pattern: " pattern ;;
-        *) echo "[x] Invalid option selected." ; return ;;
+        *)
+            echo "[x] Invalid option selected."
+            return
+            ;;
     esac
 
     local viewer
-    viewer=$(echo -e "[1] Terminal (current window)\n[2] gnome-terminal (new window)\n[3] Open in Kate\n[4] Open in VS Code\n[5] Open in Sublime Text\n[6] Save to temporary file" | \
-        fzf --prompt="[>] Choose how to view the filtered logs: ")
+    viewer=$(echo -e "[1] Terminal (current window)\n[2] gnome-terminal (new window)\n[3] Open in Kate\n[4] Open in VS Code\n[5] Open in Sublime Text\n[6] Save to temporary file" \
+        | fzf --prompt="[>] Choose how to view the filtered logs: ")
 
     case "$viewer" in
         "[1]"*)
             kubectl logs "$POD_NAME" -n "$NAMESPACE" -f 2>/dev/null | grep -i -E "$pattern"
             ;;
         "[2]"*)
-            gnome-terminal --title="Filtered Logs - $POD_NAME" --geometry=180x45 -- bash -c \
-            "kubectl logs \"$POD_NAME\" -n \"$NAMESPACE\" -f 2>/dev/null | grep -i -E \"$pattern\"; echo ''; read"
+            kubelynx::run_in_new_terminal "Filtered Logs - $POD_NAME" \
+                "kubectl logs \"$POD_NAME\" -n \"$NAMESPACE\" -f 2>/dev/null | grep -i -E \"$pattern\"; echo ''; read"
             ;;
         "[3]"*)
             tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}-filtered.log")
-            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" > "$tmpfile" || {
+            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" >"$tmpfile" || {
                 frame_message "$YELLOW" "⚠️  Pod '$POD_NAME' is not in Running state"
                 frame_message "$CYAN" "💡 Use 'kubectl describe pod $POD_NAME -n $NAMESPACE' to get more details about pod issues..."
                 return 1
@@ -109,17 +130,17 @@ get_logs_with_error_filtering() {
             ;;
         "[4]"*)
             tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}-filtered.log")
-            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" > "$tmpfile"
+            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" >"$tmpfile"
             code "$tmpfile"
             ;;
         "[5]"*)
             tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}-filtered.log")
-            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" > "$tmpfile"
+            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" >"$tmpfile"
             subl "$tmpfile"
             ;;
         "[6]"*)
             tmpfile=$(create_temp_file "_pod-logs-${POD_NAME}-${NAMESPACE}-filtered.log")
-            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" > "$tmpfile"
+            kubectl logs "$POD_NAME" -n "$NAMESPACE" 2>/dev/null | grep -i -E "$pattern" >"$tmpfile"
             echo "[✓] Logs saved in: $tmpfile"
             ;;
         *) echo "[x] No valid option selected." ;;

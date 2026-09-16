@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 RED='\033[1;31m'
 GREEN='\033[1;32m'
 NC='\033[0m'
@@ -17,8 +20,8 @@ check_cluster_connectivity_snipp() {
     bash -c "$command" &>/dev/null &
     local pid=$!
 
-    while kill -0 $pid 2>/dev/null; do
-        i=$(( (i + 1) % ${#spin} ))
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$(((i + 1) % ${#spin}))
         printf "\r%s %s..." "${spin:$i:1}" "$message"
         sleep $delay
     done
@@ -36,11 +39,17 @@ check_cluster_connectivity_snipp() {
 }
 
 cluster::check_connectivity() {
-    if ! timeout 10s kubectl cluster-info &>/dev/null; then
+    if command -v timeout >/dev/null 2>&1; then
+        if ! timeout 10 kubectl cluster-info &>/dev/null; then
+            echo -e "${RED}[✖] Checking cluster connectivity... failed${NC}"
+            return 1
+        fi
+        return 0
+    fi
+    if ! kubectl cluster-info &>/dev/null; then
         echo -e "${RED}[✖] Checking cluster connectivity... failed${NC}"
         return 1
     fi
 }
-
 
 # Check API server health

@@ -1,17 +1,19 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 function ok_kubectl_exec_pod {
     # is_pod_ns_exit
     ensure_pod_and_namespace || return 1
     COMMAND="ls"
-    if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- which $COMMAND > /dev/null 2>&1; then
+    if kubectl exec -n "$NAMESPACE" "$POD_NAME" -- which $COMMAND >/dev/null 2>&1; then
         echo "Executing $COMMAND in the container..."
-        gnome-terminal --title="terminal - pods - $POD_NAME -namespace $NAMESPACE" --geometry=180x45 --tab -- bash -c "kubectl -n $NAMESPACE exec -it ${POD_NAME} -- /bin/sh; echo 'Type exit to close terminal'; exec /bin/bash"
+        kubelynx::run_in_new_terminal "pod $POD_NAME ($NAMESPACE)" "kubectl -n \"$NAMESPACE\" exec -it \"$POD_NAME\" -- /bin/sh; echo 'Type exit to close terminal'; exec /bin/bash"
 
     else
         echo "OCI runtime exec failed: exec failed: unable to start container process: exec: ls: executable file not found in \$PATH: unknown"
-    fi        
+    fi
 }
 
 function ok_k_exec_command {
@@ -32,10 +34,11 @@ function ok_k_exec_command {
         COMMAND=("$@")
     fi
 
-    
-    echo "Executing: $COMMAND in the container..."
+    echo "Executing: ${COMMAND[*]} in the container..."
 
-    gnome-terminal --title="terminal - pods - $POD_NAME -namespace $NAMESPACE" --geometry=180x45 --tab -- bash -c "kubectl -n $NAMESPACE exec -it ${POD_NAME} -- $COMMAND; echo 'Type exit to close terminal'; exec /bin/bash"
+    local quoted
+    quoted="$(printf '%q ' "${COMMAND[@]}")"
+    kubelynx::run_in_new_terminal "pod $POD_NAME ($NAMESPACE)" "kubectl -n \"$NAMESPACE\" exec -it \"$POD_NAME\" -- $quoted; echo 'Type exit to close terminal'; exec /bin/bash"
 }
 
 kube_connect_to_pod() {
@@ -53,19 +56,14 @@ kube_connect_to_pod() {
         pod=$(select_pod "$NAMESPACE") || return 1
         ns="$NAMESPACE"
     fi
-    echo -e "${YELLOW}🔗 Opening new terminal to connect to pod '${pod}' in namespace '${ns}'...${RESET}"
+    echo -e "${YELLOW}🔗 Opening terminal to connect to pod '${pod}' in namespace '${ns}'...${RESET}"
 
     local shell_cmd="/bin/sh"
-    if kubectl exec -n \"$ns\" \"$pod\" -- ls /bin/bash &>/dev/null; then
+    if kubectl exec -n "$ns" "$pod" -- ls /bin/bash &>/dev/null; then
         shell_cmd="/bin/bash"
     fi
 
-    gnome-terminal \
-        --title="K8s Connect → Pod: $pod | Namespace: $ns" \
-        --geometry=180x45 \
-        --maximize \
-        -- bash -c "kubectl exec -it -n \"$ns\" \"$pod\" -- $shell_cmd; echo -e '\n${YELLOW}Session closed. Press ENTER to exit.${RESET}'; read"
+    kubelynx::run_in_new_terminal "K8s Connect → Pod: $pod | Namespace: $ns" "kubectl exec -it -n \"$ns\" \"$pod\" -- $shell_cmd; echo; echo 'Session closed. Press ENTER to exit.'; read"
 }
-
 
 # Multi-container support

@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 display_all_resources_of_namespace() {
 
     local ns
@@ -9,8 +12,8 @@ display_all_resources_of_namespace() {
     printf "| %-11s | %-28s |\n" "TYPE" "NAME"
     printf "+-------------+------------------------------+\n"
 
-    kubectl -n "$ns" get all --no-headers -o custom-columns='TYPE:.kind,NAME:.metadata.name' 2>/dev/null | \
-    awk '
+    kubectl -n "$ns" get all --no-headers -o custom-columns='TYPE:.kind,NAME:.metadata.name' 2>/dev/null \
+        | awk '
     {
         kind = $1
         name = $2
@@ -41,7 +44,7 @@ new_count_resource_types() {
     local namespace_option
     if [[ "$choice" == "1" ]]; then
         echo
-        read -rp "  Enter the namespace (enter to select one) : " NAMESPACE  
+        read -rp "  Enter the namespace (enter to select one) : " NAMESPACE
         if [[ -z $NAMESPACE ]]; then
             NAMESPACE=$(select_namespace) || exit 1
         fi
@@ -74,26 +77,26 @@ new_count_resource_types() {
     resource_counts[CRDs]=$(kubectl get crds --no-headers 2>/dev/null | wc -l || echo 0)
     resource_counts[StorageClasses]=$(kubectl get storageclass --no-headers 2>/dev/null | wc -l || echo 0)
     # networkpolicy
-    # 
+    #
 
     # Initialisation du total
     total=0
 
     # Définir un tableau avec l'ordre spécifique des types de ressources
-    ordered_resources=("DaemonSets" "Deployments" "StatefulSets" "Pods" "Secrets" "ConfigMaps" "Services" 
-                       "Ingresses" "PersistentVolumeClaims" "PersistentVolumes" "CronJobs" "Jobs" "CRDs" "StorageClasses")
+    ordered_resources=("DaemonSets" "Deployments" "StatefulSets" "Pods" "Secrets" "ConfigMaps" "Services"
+        "Ingresses" "PersistentVolumeClaims" "PersistentVolumes" "CronJobs" "Jobs" "CRDs" "StorageClasses")
 
     # Créer un tableau temporaire pour stocker les ressources et leurs comptes
     {
         echo -e "${YELLOW}  Count Resource Type${RESET}\n"
         for resource in "${ordered_resources[@]}"; do
-            count=${resource_counts[$resource]}  # Récupérer le compte
-            printf "%-30s %d\n" "    $resource" "$count"  # Imprimer le type de ressource et son compte
-            total=$((total + count))  # Ajouter au total
+            count=${resource_counts[$resource]}          # Récupérer le compte
+            printf "%-30s %d\n" "    $resource" "$count" # Imprimer le type de ressource et son compte
+            total=$((total + count))                     # Ajouter au total
         done
         echo -e "${MAGENTA}    --------------------------------${RESET}"
 
-        printf "%-30s %d\n" "    Total" "$total"  # Afficher le total des ressources
+        printf "%-30s %d\n" "    Total" "$total" # Afficher le total des ressources
     }
 
     echo
@@ -101,7 +104,7 @@ new_count_resource_types() {
 
 get_nodes_list_sort_by_age() {
     # kubectl get nodes -owide --sort-by='.metadata.creationTimestamp'
-    kubectl get nodes  | awk 'NR==1{print;next} 
+    kubectl get nodes | awk 'NR==1{print;next} 
     {
         age = $4;
         days = 0; hours = 0; minutes = 0;

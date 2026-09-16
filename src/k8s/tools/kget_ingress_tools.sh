@@ -1,6 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 select_ingress() {
     local namespace="$1"
     local ingresses
@@ -16,31 +18,25 @@ select_ingress() {
 }
 
 ok_kget_ingress_info() {
-    # loaded environment: provider=gcp cluster=imported-gke vpod=vpodg1p tenant=onecaas env=prd
-    # carrefour_swirch
     if [ "$#" -eq 2 ]; then
-    #if [ "$#" -eq 0 ]; then
         if [[ $1 = "url" ]]; then
-        URL="$2"
-        by_url="${3:-}"
-          #URL="oauth2-proxy.prd.mgmt.caas.vpodg1p.carrefour.com"
-
-
-          INGRESS_NAME="$(kubectl get ingress --all-namespaces -o json 2>/dev/null | jq -r --arg HOST "$URL" '.items[] | select(.spec.rules[].host == $HOST) | .metadata.name')"
-          NAMESPACE="$(kubectl get ingress --all-namespaces -o json 2>/dev/null | jq -r --arg HOST "$URL" '.items[] | select(.spec.rules[].host == $HOST) | .metadata.namespace')"
+            URL="$2"
+            by_url="${3:-}"
+            INGRESS_NAME="$(kubectl get ingress --all-namespaces -o json 2>/dev/null | jq -r --arg HOST "$URL" '.items[] | select(.spec.rules[].host == $HOST) | .metadata.name')"
+            NAMESPACE="$(kubectl get ingress --all-namespaces -o json 2>/dev/null | jq -r --arg HOST "$URL" '.items[] | select(.spec.rules[].host == $HOST) | .metadata.namespace')"
         else
-          NAMESPACE="$1"
-          INGRESS_NAME="$2"
-          #if [[ -z "$INGRESS_NAME" ]] || [[ -z $NAMESPACE ]]; then
-          #    NAMESPACE=$(select_namespace) || exit 1
-          #    INGRESS_NAME=$(select_ingress $NAMESPACE) || exit 1
-          #    if [[ -z $NAMESPACE || -z "$INGRESS_NAME" ]]; then
-          #        echo "namespace and/or ingress name is empty. Exiting..."
-          #        return 1
-          #    fi
-          #    frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
-          #    frame_message "${GREEN}" "Selected ingress $INGRESS_NAME"
-          #fi
+            NAMESPACE="$1"
+            INGRESS_NAME="$2"
+            #if [[ -z "$INGRESS_NAME" ]] || [[ -z $NAMESPACE ]]; then
+            #    NAMESPACE=$(select_namespace) || exit 1
+            #    INGRESS_NAME=$(select_ingress $NAMESPACE) || exit 1
+            #    if [[ -z $NAMESPACE || -z "$INGRESS_NAME" ]]; then
+            #        echo "namespace and/or ingress name is empty. Exiting..."
+            #        return 1
+            #    fi
+            #    frame_message_1 "${GREEN}" "[✓] Selected Namespace: $NAMESPACE"
+            #    frame_message "${GREEN}" "Selected ingress $INGRESS_NAME"
+            #fi
         fi
 
         ingress_json=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" -o json 2>/dev/null)
@@ -83,8 +79,8 @@ ok_kget_ingress_info() {
         echo "      > backend type: $backend_type ($service_fqdn)"
         echo "      > atached to pods: $backend_type ($service_fqdn)"
         echo "$pods_attached" | while read line; do
-                      echo "                       > $line"
-                  done
+            echo "                       > $line"
+        done
     elif [[ "$1" =~ ^(help|h|--help)$ ]]; then
         echo -e "Usage: \n $0 <namespace> <ingress_name> \n $0 <url> <url_name>  \n or $0 all"
         exit 1
@@ -170,12 +166,12 @@ kget_ingress_info() {
         return 1
     fi
 
-    NAME=$(jq -r '.metadata.name' <<< "$ingress_json")
-    HOSTS=$(jq -r '.spec.rules[]?.host' <<< "$ingress_json")
-    BACKENDS=$(jq -r '.spec.rules[]?.http.paths[]? | "- Path: \(.path // "/"), Service: \(.backend.service.name), Port: \(.backend.service.port.number // .backend.service.port.name)"' <<< "$ingress_json")
-    TLS=$(jq -r '.spec.tls[]? | "- Hosts: \(.hosts | join(", ")) | Secret: \(.secretName)"' <<< "$ingress_json")
-    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<< "$ingress_json")
-    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<< "$ingress_json")
+    NAME=$(jq -r '.metadata.name' <<<"$ingress_json")
+    HOSTS=$(jq -r '.spec.rules[]?.host' <<<"$ingress_json")
+    BACKENDS=$(jq -r '.spec.rules[]?.http.paths[]? | "- Path: \(.path // "/"), Service: \(.backend.service.name), Port: \(.backend.service.port.number // .backend.service.port.name)"' <<<"$ingress_json")
+    TLS=$(jq -r '.spec.tls[]? | "- Hosts: \(.hosts | join(", ")) | Secret: \(.secretName)"' <<<"$ingress_json")
+    LABELS=$(jq -r '.metadata.labels | to_entries[] | "- \(.key): \(.value)"' <<<"$ingress_json")
+    ANNOTATIONS=$(jq -r '.metadata.annotations | to_entries[] | "- \(.key): \(.value)"' <<<"$ingress_json")
 
     local available_sections=(
         "Name"
@@ -189,8 +185,8 @@ kget_ingress_info() {
 
     local selected_sections
     selected_sections=$(printf "%s
-" "${available_sections[@]}" | \
-        fzf --multi --prompt="Select ingress info to display: " --header="TAB to select multiple, ENTER for all")
+" "${available_sections[@]}" \
+        | fzf --multi --prompt="Select ingress info to display: " --header="TAB to select multiple, ENTER for all")
 
     if [[ -z "$selected_sections" ]]; then
         selected_sections="all"

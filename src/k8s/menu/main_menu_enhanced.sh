@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # shellcheck disable=SC2034  # Arrays used via nameref in menu::show_menu
 
 # ============================================================================
@@ -17,7 +20,7 @@ menu::select_main_action() {
             "Fix a Namespace"
             "Exit"
         )
-        
+
         # Menu descriptions
         local main_descriptions=(
             "Manage deployments, scale, rollback, port forward, and connect to pods"
@@ -28,7 +31,7 @@ menu::select_main_action() {
             "Set default namespace for kubectl commands"
             "Exit the application"
         )
-        
+
         # Show menu
         local selected
         selected=$(menu::show_menu \
@@ -36,11 +39,11 @@ menu::select_main_action() {
             "main_options" \
             "main_descriptions" \
             "Main Menu")
-        
+
         # Trim whitespace and check if empty
         selected=$(echo "$selected" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         [[ -z "$selected" ]] && continue
-        
+
         # Handle selection
         case "$selected" in
             "Kubernetes Core Actions")
@@ -71,7 +74,7 @@ menu::select_main_action() {
                 echo -e "${MENU_RED}Invalid option selected.${MENU_RESET}"
                 ;;
         esac
-        
+
         menu::print_separator
     done
 }
@@ -93,7 +96,7 @@ menu::kubernetes_core_actions() {
             "Connect to Pod"
             "Go Home"
         )
-        
+
         # Menu descriptions
         local core_descriptions=(
             "Return to previous menu"
@@ -105,19 +108,19 @@ menu::kubernetes_core_actions() {
             "Open an interactive shell inside a pod"
             "Return to main menu"
         )
-        
+
         # Confirmation flags (true = requires confirmation)
         local core_confirm=(
             "false"
-            "true"   # Restart Deployment
-            "true"   # Scale Deployment
-            "false"  # Rollout History
-            "true"   # Rollback Deployment
-            "false"  # Port Forward
-            "false"  # Connect to Pod
-            "false"  # Go Home
+            "true"  # Restart Deployment
+            "true"  # Scale Deployment
+            "false" # Rollout History
+            "true"  # Rollback Deployment
+            "false" # Port Forward
+            "false" # Connect to Pod
+            "false" # Go Home
         )
-        
+
         # Show menu
         local selected
         selected=$(menu::show_menu \
@@ -126,11 +129,11 @@ menu::kubernetes_core_actions() {
             "core_descriptions" \
             "Main Menu > Kubernetes Core Actions" \
             "core_confirm")
-        
+
         # Trim whitespace and check if empty
         selected=$(echo "$selected" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         [[ -z "$selected" ]] && return 0
-        
+
         # Handle selection
         case "$selected" in
             "Go Back")
@@ -162,8 +165,7 @@ menu::kubernetes_core_actions() {
                 echo -e "${MENU_RED}Invalid option selected.${MENU_RESET}"
                 ;;
         esac
-        
+
         menu::print_separator
     done
 }
-

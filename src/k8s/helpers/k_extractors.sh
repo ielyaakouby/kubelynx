@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 function display_secret_content() {
     local NAMESPACE="${1}"
     local secret_name="${2}"
@@ -35,8 +38,12 @@ function display_secret_content() {
         echo -e "${COLOR_YELLOW}Selected key: $secret_key ${COLOR_RESET}"
         content=$(kubectl -n "$NAMESPACE" get secret "$secret_name" -o json | jq -r ".data[\"$secret_key\"]" 2>/dev/null)
 
-        if [[ "$content" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] && [ $(( ${#content} % 4 )) -eq 0 ]; then
-            gnome-terminal --title="the content of $secret_name > $secret_key -namespace $NAMESPACE" --geometry=180x45 --tab -- bash -c "echo $content | base64 --decode 2>/dev/null && echo ""; read"
+        if [[ "$content" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] && [ $((${#content} % 4)) -eq 0 ]; then
+            local decoded tmp_secret
+            decoded="$(printf '%s' "$content" | base64 --decode 2>/dev/null || true)"
+            tmp_secret="$(create_temp_file "_secret.txt")"
+            printf '%s\n' "$decoded" >"$tmp_secret"
+            kubelynx::run_in_new_terminal "secret $secret_name / $secret_key ($NAMESPACE)" "cat '$tmp_secret'; echo ''; read"
         else
             echo -e "${COLOR_GREEN}$secret_key:${COLOR_RESET}"
             echo "$content"
@@ -50,15 +57,15 @@ function display_secret_content() {
 k8s_get_matching_secrets() {
     local NAMESPACE="$1"
     local search_string="$2"
-    
+
     if [ -z "$NAMESPACE" ] || [ -z "$search_string" ]; then
         k8s_get_matching_secrets_display_help
     fi
-    
-    kubectl -n "$NAMESPACE" get secret --no-headers | awk '{print $1}' | while read -r secret_name; do  
-        kubectl -n "$NAMESPACE" get secret "$secret_name" -o jsonpath='{.data}' | \
-        jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"' | \
-        grep "$search_string"
+
+    kubectl -n "$NAMESPACE" get secret --no-headers | awk '{print $1}' | while read -r secret_name; do
+        kubectl -n "$NAMESPACE" get secret "$secret_name" -o jsonpath='{.data}' \
+            | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"' \
+            | grep "$search_string"
     done
 }
 
@@ -99,11 +106,13 @@ display_configmap_content() {
         echo -e "${COLOR_YELLOW}Selected key: $configmap_key ....${COLOR_RESET}"
         content=$(kubectl -n "$NAMESPACE" get cm "$configmap_name" -o json | jq -r ".data[\"$configmap_key\"]" 2>/dev/null)
 
-        if [[ "$content" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] && [ $(( ${#content} % 4 )) -eq 0 ]; then
+        if [[ "$content" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] && [ $((${#content} % 4)) -eq 0 ]; then
             echo -e "${COLOR_GREEN}$configmap_key:${COLOR_RESET}"
-            echo -e "${COLOR_GREEN}the content of $configmap_key > $secret_key:${COLOR_RESET}"
-            #echo "$content" | base64 --decode
-            gnome-terminal --title="the content of $configmap_key > $secret_key -namespace $NAMESPACE" --geometry=180x45 --tab -- bash -c "echo $content | base64 --decode 2>/dev/null && echo ""; read"
+            local decoded tmp_cm
+            decoded="$(printf '%s' "$content" | base64 --decode 2>/dev/null || true)"
+            tmp_cm="$(create_temp_file "_configmap.txt")"
+            printf '%s\n' "$decoded" >"$tmp_cm"
+            kubelynx::run_in_new_terminal "configmap $configmap_name / $configmap_key ($NAMESPACE)" "cat '$tmp_cm'; echo ''; read"
         else
             echo -e "${COLOR_GREEN}$configmap_key:${COLOR_RESET}"
             echo "$content"

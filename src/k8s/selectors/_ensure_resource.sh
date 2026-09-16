@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 check_resource_count() {
     local resource_type="${1:-}"
     local namespace="${2:-}"
@@ -17,10 +19,9 @@ check_resource_count() {
         frame_message "$RED" "❌ No ${resource_type} found in the namespace '${namespace}'. Returning to menu..."
         return 1
     else
-        echo -e "${GREEN}[✓] $count ${resource_type}$( [[ "$count" -gt 1 ]] && echo 's' ) found in the namespace '${namespace}'.${RESET}"
+        echo -e "${GREEN}[✓] $count ${resource_type}$([[ "$count" -gt 1 ]] && echo 's') found in the namespace '${namespace}'.${RESET}"
     fi
 }
-
 
 check_resource_count_() {
     local resource="$1"

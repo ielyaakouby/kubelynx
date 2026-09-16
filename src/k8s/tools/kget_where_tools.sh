@@ -1,13 +1,14 @@
-#!/usr/bin/bash
-
-#!/bin/bash
+#!/usr/bin/env bash
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 
 kget_where_usage() {
     echo "kget_where_usage: $0 <pod> where label is/in \"label1,label2,...\""
 }
 
 validate_args() {
-    echo "@: $@"
+    echo "@: $*"
     if [[ "$#" -ne 5 ]]; then
         kget_where_usage
         return 1
@@ -23,10 +24,10 @@ extract_labels() {
     local wheree="$1"
     local input_labels="$2"
     if [[ $wheree == "is" ]]; then
-      labelss="$labelss"
+        labelss="$input_labels"
     fi
     if [[ $wheree == "in" ]]; then
-      labelss=$(echo $input_labels | sed 's/,/|/g'  | sed 's/ //g')
+        labelss=$(echo $input_labels | sed 's/,/|/g' | sed 's/ //g')
     fi
     echo $labelss
 }
@@ -34,7 +35,7 @@ extract_labels() {
 get_resource_info() {
     local RESOURCE="$1"
     local LABELS="$2"
-    local reset="\033[0m"  # Reset color
+    local reset="\033[0m" # Reset color
     declare -a colors=(
         "\033[0;31m" "\033[0;32m" "\033[0;33m" "\033[0;34m"
         "\033[0;35m" "\033[0;36m" "\033[0;37m" "\033[1;34m"
@@ -62,13 +63,13 @@ get_resource_info() {
     #       printf "%s%s\t%s\t%s\t%s\t%s%s\n", colorMap[namespace], $1, $2, $3, $4, $6, reset;
     #
     #   }' | column -t
-            #printf "%s%s\t%s\t%s\t%s\t%s\t%s%s\n", colorMap[namespace], $1, $2, $3, $4, $6, $7, reset;
+    #printf "%s%s\t%s\t%s\t%s\t%s\t%s%s\n", colorMap[namespace], $1, $2, $3, $4, $6, $7, reset;
     #done
 }
 
 _kget_where_1_completion() {
     local pods
-    pods=$(kubectl get pods --no-headers -o custom-columns=":metadata.name")  # Fetch pod names
+    pods=$(kubectl get pods --no-headers -o custom-columns=":metadata.name") # Fetch pod names
 
     local commands="where"
     local labels="label"
@@ -76,15 +77,15 @@ _kget_where_1_completion() {
     local current_word="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "$pods" -- "$current_word") )
+        COMPREPLY=($(compgen -W "$pods" -- "$current_word"))
     elif [[ $COMP_CWORD -eq 2 ]]; then
-        COMPREPLY=( $(compgen -W "$commands" -- "$current_word") )
+        COMPREPLY=($(compgen -W "$commands" -- "$current_word"))
     elif [[ $COMP_CWORD -eq 3 ]]; then
-        COMPREPLY=( $(compgen -W "$labels" -- "$current_word") )
+        COMPREPLY=($(compgen -W "$labels" -- "$current_word"))
     elif [[ $COMP_CWORD -eq 4 ]]; then
-        COMPREPLY=( $(compgen -W "is in" -- "$current_word") )
+        COMPREPLY=($(compgen -W "is in" -- "$current_word"))
     elif [[ $COMP_CWORD -eq 5 ]]; then
-        COMPREPLY=( $(compgen -W "app.kubernetes.io/name=vm,label1=value1" -- "$current_word") )  # Example labels
+        COMPREPLY=($(compgen -W "app.kubernetes.io/name=vm,label1=value1" -- "$current_word")) # Example labels
     fi
 }
 
@@ -96,14 +97,14 @@ kget_where() {
 
     local RESOURCE="$1"
     local labelss
-    
+
     if [[ $4 == "is" ]]; then
-      labelss="$5"
+        labelss="$5"
     fi
     if [[ $4 == "in" ]]; then
-      labelss=$(echo $5 | sed 's/,/|/g'  | sed 's/ //g')
+        labelss=$(echo $5 | sed 's/,/|/g' | sed 's/ //g')
     fi
-    
+
     echo "labelss:: $labelss"
     declare -a colors=(
         "\033[0;31m" "\033[0;32m" "\033[0;33m" "\033[0;34m"
@@ -112,10 +113,8 @@ kget_where() {
     )
 
     echo -e "${reset}NAMESPACE\tPOD\tSTATUS\tREADY\tAGE"
- 
+
     kubectl get $RESOURCE --all-namespaces --show-labels | grep -iE "$labelss" 2>/dev/null
 }
 
 complete -F _kget_where_1_completion kget_where
-
-

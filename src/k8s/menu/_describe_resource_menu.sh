@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 select_describe_resource_menu() {
 
     while true; do
@@ -17,8 +20,8 @@ select_describe_resource_menu() {
         )
 
         local selected_action
-        selected_action=$(printf "%s\n" "${options[@]}" | \
-            fzf --prompt="Main Menu ❯ Describe Menu ❯ " \
+        selected_action=$(printf "%s\n" "${options[@]}" \
+            | fzf --prompt="Main Menu ❯ Describe Menu ❯ " \
                 --header="➤ Kubernetes Resource Explorer - Choose what to describe" \
                 --height=50% \
                 --border=rounded \
@@ -60,7 +63,7 @@ select_describe_resource_menu() {
                 print_separator
                 ;;
             *"Go Back") return 0 ;;
-            *"Go Home") menu::select_main_action;;
+            *"Go Home") menu::select_main_action ;;
             *)
                 frame_message "${RED}" "Invalid option selected."
                 ;;

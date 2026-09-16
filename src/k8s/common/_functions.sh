@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Shared globals such as NAMESPACE and color codes are defined by the entrypoint
+# and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 
 define_colors() {
     colors=(
@@ -20,18 +23,44 @@ frame_message() {
 create_temp_file() {
     local suffix="${1:-}"
     local tmp_file
-    
+    local tmpdir="${TMPDIR:-/tmp}"
+
+    tmp_file="$(mktemp "${tmpdir}/kubelynx.XXXXXX")" || return 1
     if [[ -n "$suffix" ]]; then
-        tmp_file=$(mktemp --suffix="$suffix")
-    else
-        tmp_file=$(mktemp)
+        suffix="${suffix//\//_}"
+        if mv "$tmp_file" "${tmp_file}${suffix}"; then
+            tmp_file="${tmp_file}${suffix}"
+        fi
     fi
-    
+
     if command -v register_temp_file &>/dev/null; then
         register_temp_file "$tmp_file"
     fi
-    
-    echo "$tmp_file"
+
+    printf '%s\n' "$tmp_file"
+}
+
+# gnome-terminal is optional. Only "open in a new window" actions need it.
+kubelynx::have_gnome_terminal() {
+    command -v gnome-terminal >/dev/null 2>&1
+}
+
+# Run a command string in a new GNOME terminal when available.
+# Falls back to the current terminal so the rest of KubeLynx keeps working.
+kubelynx::run_in_new_terminal() {
+    local title="${1:-KubeLynx}"
+    local command="${2:-}"
+    if [[ -z "$command" ]]; then
+        echo "No command to run." >&2
+        return 1
+    fi
+    if kubelynx::have_gnome_terminal; then
+        gnome-terminal --title="$title" --geometry=180x45 -- bash -c "$command"
+        return $?
+    fi
+    echo "gnome-terminal is not installed; running in the current terminal." >&2
+    echo "Install gnome-terminal to open this action in a new window." >&2
+    bash -c "$command"
 }
 
 choose_yaml_viewer() {
@@ -50,32 +79,23 @@ open_yaml_output() {
     frame_message "$GREEN" "Opening YAML file with $viewer..."
 
     case "$viewer" in
-        "cat")         echo -e "\n--- YAML Content ---\n"; cat "$content_file"; echo -e "\n--- End of YAML ---\n" ;;
-        "vim")         vim "$content_file" ;;
-        "nano")        nano "$content_file" ;;
-        "kate")        nohup kate -n "$content_file" &> /dev/null & ;;
-        "jless")       gnome-terminal --title="$title" --geometry=180x45 -- bash -c "jless --yaml '$content_file'; echo ''; read" ;;
-        "code"|"vscode") nohup code -n "$content_file" &> /dev/null & ;;
-        "gedit")       nohup gedit "$content_file" &> /dev/null & ;;
-        "notepadqq")   nohup notepadqq "$content_file" &> /dev/null & ;;
-        *)             frame_message "$RED" "❌ Unrecognized viewer: $viewer. Cancelled."; return 1 ;;
+        "cat")
+            echo -e "\n--- YAML Content ---\n"
+            cat "$content_file"
+            echo -e "\n--- End of YAML ---\n"
+            ;;
+        "vim") vim "$content_file" ;;
+        "nano") nano "$content_file" ;;
+        "kate") nohup kate -n "$content_file" &>/dev/null & ;;
+        "jless") kubelynx::run_in_new_terminal "$title" "jless --yaml '$content_file'; echo ''; read" ;;
+        "code" | "vscode") nohup code -n "$content_file" &>/dev/null & ;;
+        "gedit") nohup gedit "$content_file" &>/dev/null & ;;
+        "notepadqq") nohup notepadqq "$content_file" &>/dev/null & ;;
+        *)
+            frame_message "$RED" "❌ Unrecognized viewer: $viewer. Cancelled."
+            return 1
+            ;;
     esac
-}
-
-
-ok_k_switch() {
-    local TEMP_DIR=${TEMP_DIR:-"/data/winw/carrefour/caas/repos/onecaas/tmp"}
-    local kubeconfig_dir="$TEMP_DIR/kubeconfig"
-    local COLOR_YELLOW="\e[1;33m"
-    local COLOR_RED="\e[1;31m"
-    local COLOR_RESET="\e[0m"
-
-    [[ ! -d "$kubeconfig_dir" ]] && echo -e "${COLOR_RED}Error:${COLOR_RESET} Directory $kubeconfig_dir does not exist." && return 1
-
-    local selected_file
-    selected_file=$(ls -d "$kubeconfig_dir"/* 2>/dev/null | grep -vE "\-rancher|\-gcloud|az-local" | fzf --exact)
-
-    [[ -n "$selected_file" ]] && export KUBECONFIG="$selected_file" && echo -e "${COLOR_YELLOW}KUBECONFIG set to:${COLOR_RESET} $KUBECONFIG" || echo -e "${COLOR_RED}No file selected. KUBECONFIG not changed.${COLOR_RESET}"
 }
 
 kgp() {
@@ -106,13 +126,12 @@ select_resource() {
         echo "No resource type selected."
         exit 1
     fi
-    
+
     resources=$(kubectl get "$resource_type" --all-namespaces --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
     selected_resource=$(echo "$resources" | fzf --prompt="Select a $resource_type: ")
-    
+
     echo "$selected_resource"
 }
-
 
 select_namespace() {
     local namespaces
@@ -130,10 +149,10 @@ select_namespace() {
 check_pod_status_for_logs() {
     local pod="$1"
     local namespace="$2"
-    
+
     local pod_status
     pod_status=$(kubectl get pod "$pod" -n "$namespace" -o jsonpath='{.status.phase}' 2>/dev/null)
-    
+
     if [[ "$pod_status" != "Running" ]]; then
         frame_message "$YELLOW" "⚠️  Pod '$pod' is not in Running state (current status: ${pod_status:-Unknown})"
         frame_message "$CYAN" "💡 Use 'kubectl describe pod $pod -n $namespace' to get more details about pod issues..."
@@ -159,11 +178,11 @@ spinner() {
     local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
     local i=0
 
-    eval "$command" &
+    bash -c "$command" &
     local pid=$!
 
     while kill -0 "$pid" 2>/dev/null; do
-        i=$(( (i + 1) % ${#spin} ))
+        i=$(((i + 1) % ${#spin}))
         printf "\r%s %s..." "${spin:$i:1}" "$message" >&2
         sleep "$delay"
     done
@@ -200,7 +219,7 @@ check_snipp() {
         done
     }
 
-    eval "$command" &>/dev/null &
+    bash -c "$command" &>/dev/null &
     local pid=$!
 
     spinner "$pid" &
@@ -230,14 +249,6 @@ display_message() {
     esac
 }
 
-cleanup() {
-  [[ -f "$OK_FILE" ]] && rm -f "$OK_FILE"
-  [[ -f "$NOK_FILE" ]] && rm -f "$NOK_FILE"
-  [[ -f "$TMP_ALL_PODS" ]] && rm -f "$TMP_ALL_PODS"
-  [[ -f "$TMP_NODE_REPORT" ]] && rm -f "$TMP_NODE_REPORT"
-  [[ -f "$TMP_NODE_COUNTS" ]] && rm -f "$TMP_NODE_COUNTS"
-}
-
 calculate_time_and_end() {
     local duration=$1
     local start_time
@@ -249,7 +260,7 @@ calculate_time_and_end() {
         current_time=$(date +%s)
         elapsed_time=$((current_time - start_time))
 
-        if (( elapsed_time >= duration )); then
+        if ((elapsed_time >= duration)); then
             echo "Time limit reached: $elapsed_time seconds."
             exit 0
         fi

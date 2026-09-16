@@ -1,44 +1,46 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 check_namespace_resources() {
-  echo "CHECK: Starting check_namespace_resources function with arguments: $*"
+    echo "CHECK: Starting check_namespace_resources function with arguments: $*"
 
-  # Check if at least one namespace is provided
-  if [[ $# -eq 0 ]]; then
-    echo "Please provide at least one namespace as an argument."
-    return 1
-  fi
-
-  for namespace in "$@"; do
-    echo "CHECK: Processing namespace: $namespace"
-    echo "Checking namespace: $namespace"
-
-    # Check if the namespace exists
-    if ! kubectl get namespace "$namespace" &>/dev/null; then
-      echo "Namespace '$namespace' does not exist."
-      echo "CHECK: Namespace '$namespace' does not exist. Skipping."
-      continue
+    # Check if at least one namespace is provided
+    if [[ $# -eq 0 ]]; then
+        echo "Please provide at least one namespace as an argument."
+        return 1
     fi
 
-    echo "Namespace '$namespace' exists. Checking for resources..."
+    for namespace in "$@"; do
+        echo "CHECK: Processing namespace: $namespace"
+        echo "Checking namespace: $namespace"
 
-    # Check if there are any resources in the namespace
-    echo "CHECK: Fetching resource types available for namespace '$namespace'."
-    resources=$(kubectl api-resources --verbs=list --namespaced -o name | \
-                xargs -I {} sh -c "kubectl get {} -n $namespace --no-headers 2>/dev/null" | wc -l)
+        # Check if the namespace exists
+        if ! kubectl get namespace "$namespace" &>/dev/null; then
+            echo "Namespace '$namespace' does not exist."
+            echo "CHECK: Namespace '$namespace' does not exist. Skipping."
+            continue
+        fi
 
-    echo "CHECK: Number of resources found in namespace '$namespace': $resources"
-    if [[ "$resources" -eq 0 ]]; then
-      echo "Namespace '$namespace' exists but has no resources."
-      echo "CHECK: No resources found in namespace '$namespace'."
-    else
-      echo "Namespace '$namespace' exists and contains $resources resource(s)."
-      echo "CHECK: Resources found in namespace '$namespace': $resources"
-    fi
-  done
+        echo "Namespace '$namespace' exists. Checking for resources..."
 
-  echo "CHECK: Completed check_namespace_resources function."
+        # Check if there are any resources in the namespace
+        echo "CHECK: Fetching resource types available for namespace '$namespace'."
+        resources=$(kubectl api-resources --verbs=list --namespaced -o name \
+            | xargs -I {} sh -c "kubectl get {} -n $namespace --no-headers 2>/dev/null" | wc -l)
+
+        echo "CHECK: Number of resources found in namespace '$namespace': $resources"
+        if [[ "$resources" -eq 0 ]]; then
+            echo "Namespace '$namespace' exists but has no resources."
+            echo "CHECK: No resources found in namespace '$namespace'."
+        else
+            echo "Namespace '$namespace' exists and contains $resources resource(s)."
+            echo "CHECK: Resources found in namespace '$namespace': $resources"
+        fi
+    done
+
+    echo "CHECK: Completed check_namespace_resources function."
 }
 
 kcheck_buffers_usage_ok() {
@@ -49,13 +51,13 @@ kcheck_buffers_usage_ok() {
     fi
     kubectl get pods --all-namespaces --no-headers | grep "$pattern" | awk '{print $1, $2}' | while read namespace pod; do
         local usage=$(kubectl exec -n "$namespace" "$pod" -- du -ksh buffers 2>/dev/null)
-        
+
         if [[ $? -eq 0 ]]; then
-            local size=$(echo "$usage" | awk '{print $1}')  # Get the size in kilobytes
+            local size=$(echo "$usage" | awk '{print $1}') # Get the size in kilobytes
             echo "buffers for pod: $namespace/$pod : $size"
-            results+=("$namespace/$pod : $size K")  # Store the result in the array
+            results+=("$namespace/$pod : $size K") # Store the result in the array
         else
-            echo "$namespace/$pod : Error retrieving usage"  # Store error in results
+            echo "$namespace/$pod : Error retrieving usage" # Store error in results
         fi
     done
 }

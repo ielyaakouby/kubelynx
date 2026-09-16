@@ -1,5 +1,8 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 ok_select_ingress() {
     local ns="${1:-all}"
     local ingresses_json
@@ -17,11 +20,11 @@ ok_select_ingress() {
     fi
 
     if [[ "$ns" == "all" ]]; then
-        selected_ingress=$(echo "$ingresses_json" | jq -r '.items[] | "\(.spec.rules[0].host // "N/A")"' | \
-            fzf --prompt "📦 Select an ingress host from any namespace: ")
+        selected_ingress=$(echo "$ingresses_json" | jq -r '.items[] | "\(.spec.rules[0].host // "N/A")"' \
+            | fzf --prompt "📦 Select an ingress host from any namespace: ")
     else
-        selected_ingress=$(echo "$ingresses_json" | jq -r '.items[] | "\(.spec.rules[0].host // "N/A")"' | \
-            fzf --prompt "📦 Select an ingress host in namespace $ns: ")
+        selected_ingress=$(echo "$ingresses_json" | jq -r '.items[] | "\(.spec.rules[0].host // "N/A")"' \
+            | fzf --prompt "📦 Select an ingress host in namespace $ns: ")
     fi
 
     if [[ -z "$selected_ingress" ]]; then
@@ -43,7 +46,6 @@ select_node_name() {
     echo "$selected_node"
 }
 
-
 select_pod() {
     local ns="${1:-}"
     [[ -z "$ns" ]] && frame_message "$RED" "No namespace provided to select_pod_." && return 1
@@ -51,9 +53,9 @@ select_pod() {
     local selected pod_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a pod (all namespaces): ")
+        selected=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a pod (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "$RED" "No pod selected." && return 1
         pod_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -65,7 +67,6 @@ select_pod() {
 
     echo "$pod_name"
 }
-
 
 is_pod_ns_exit() {
     local ns="${1:-}"
@@ -80,11 +81,10 @@ is_pod_ns_exit() {
     fi
 }
 
-
 select_configmap_name() {
     local ns="${1:-}"
     local configmap_name
-    configmap_name=$(kubectl -n "$ns"  get configmaps --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
+    configmap_name=$(kubectl -n "$ns" get configmaps --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
     selected_configmap_name=$(echo "$configmap_name" | fzf --prompt "📦 Select a configmap: ")
     if [[ -z "$selected_configmap_name" ]]; then
         frame_message "${RED}" "No configmap selected."
@@ -93,7 +93,6 @@ select_configmap_name() {
     echo "$selected_configmap_name"
 }
 
-
 select_secret_name() {
     local ns="${1:-}"
     [[ -z "$ns" ]] && frame_message "${RED}" "No namespace provided." && return 1
@@ -101,9 +100,9 @@ select_secret_name() {
     local selected secret_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get secrets --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a secret (all namespaces): ")
+        selected=$(kubectl get secrets --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a secret (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No secret selected." && return 1
         secret_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -116,7 +115,6 @@ select_secret_name() {
     echo "$secret_name"
 }
 
-
 select_deployment() {
     local ns="${1:-}"
     [[ -z "$ns" ]] && frame_message "${RED}" "No namespace provided." && return 1
@@ -124,9 +122,9 @@ select_deployment() {
     local selected deployment_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get deployments --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a deployment (all namespaces): ")
+        selected=$(kubectl get deployments --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a deployment (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No deployment selected." && return 1
         deployment_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -140,7 +138,6 @@ select_deployment() {
     echo "$deployment_name"
 }
 
-
 select_statefulset() {
     local ns="${1:-}"
     [[ -z "$ns" ]] && frame_message "${RED}" "No namespace provided." && return 1
@@ -148,9 +145,9 @@ select_statefulset() {
     local selected statefulset_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get statefulsets.apps --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a statefulset (all namespaces): ")
+        selected=$(kubectl get statefulsets.apps --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a statefulset (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No statefulset selected." && return 1
         statefulset_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -173,22 +170,21 @@ select_statefulset_daemonset_deployment() {
     local selected res_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get statefulsets,deployments,daemonsets --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,KIND:.kind,NAME:.metadata.name" 2>/dev/null | \
-            awk '{print $3 " [" $2 "] (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a resource (all namespaces): ")
+        selected=$(kubectl get statefulsets,deployments,daemonsets --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,KIND:.kind,NAME:.metadata.name" 2>/dev/null \
+            | awk '{print $3 " [" $2 "] (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a resource (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No resource selected." && return 1
         res_name=$(echo "$selected" | awk '{print $1}')
     else
-        selected=$(kubectl get statefulsets,deployments,daemonsets -n "$ns" --no-headers -o custom-columns="KIND:.kind,NAME:.metadata.name" 2>/dev/null | \
-            awk '{print $2 " [" $1 "]"}' | \
-            fzf --prompt "📦 Select a resource in namespace $ns: ")
+        selected=$(kubectl get statefulsets,deployments,daemonsets -n "$ns" --no-headers -o custom-columns="KIND:.kind,NAME:.metadata.name" 2>/dev/null \
+            | awk '{print $2 " [" $1 "]"}' \
+            | fzf --prompt "📦 Select a resource in namespace $ns: ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No resource selected." && return 1
         res_name=$(echo "$selected" | awk '{print $1}')
     fi
 
     echo "$res_name"
 }
-
 
 select_daemonset() {
     local ns="${1:-}"
@@ -197,9 +193,9 @@ select_daemonset() {
     local selected daemonset_name daemonset_ns
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get daemonsets.apps --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a daemonset (all namespaces): ")
+        selected=$(kubectl get daemonsets.apps --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a daemonset (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "${RED}" "No daemonset selected." && return 1
         daemonset_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -212,7 +208,6 @@ select_daemonset() {
     echo "$daemonset_name"
 }
 
-
 select_svc() {
     local ns="${1:-}"
     [[ -z "$ns" ]] && frame_message "$RED" "No namespace provided to select_svc." && return 1
@@ -220,9 +215,9 @@ select_svc() {
     local selected svc_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get svc --all-namespaces --no-headers 2>/dev/null | \
-            awk '{print $2 " (ns:" $1 ")"}' | \
-            fzf --prompt "📦 Select a service (all namespaces): ")
+        selected=$(kubectl get svc --all-namespaces --no-headers 2>/dev/null \
+            | awk '{print $2 " (ns:" $1 ")"}' \
+            | fzf --prompt "📦 Select a service (all namespaces): ")
         [[ -z "$selected" ]] && frame_message "$RED" "No service selected." && return 1
         svc_name=$(echo "$selected" | awk '{print $1}')
     else
@@ -247,7 +242,7 @@ select_port() {
     local ports="${2:-}"
 
     if [[ -z "$ports" ]]; then
-        frame_message "$RED" "No ports found to select." 
+        frame_message "$RED" "No ports found to select."
         return 1
     fi
 
@@ -255,7 +250,7 @@ select_port() {
 }
 
 ok_get_resources_kind_list() {
-  kubectl api-resources --verbs=list --no-headers | awk '{print $1}' 2>/dev/null
+    kubectl api-resources --verbs=list --no-headers | awk '{print $1}' 2>/dev/null
 }
 
 get_resource_type() {
@@ -266,7 +261,7 @@ get_resource_type() {
 get_resource_name() {
     resource_type="$1"
     ns="$2"
-    
+
     resource_name=$(kubectl -n "$ns" get "$resource_type" -o name 2>/dev/null | fzf --prompt="Select resource name: ")
     echo "$resource_name"
 }
@@ -278,20 +273,18 @@ select_resource_name() {
     local selected res_name
 
     if [[ "$ns" == "all" ]]; then
-        selected=$(kubectl get deploy,sts,ds --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,KIND:.kind,NAME:.metadata.name" 2>/dev/null | \
-            awk '{print $3 " [" $2 "] (ns:" $1 ")"}' | \
-            fzf --prompt="📦 Select resource (deployment/sts/ds, all namespaces) ❯ ") || return 1
+        selected=$(kubectl get deploy,sts,ds --all-namespaces --no-headers -o custom-columns="NAMESPACE:.metadata.namespace,KIND:.kind,NAME:.metadata.name" 2>/dev/null \
+            | awk '{print $3 " [" $2 "] (ns:" $1 ")"}' \
+            | fzf --prompt="📦 Select resource (deployment/sts/ds, all namespaces) ❯ ") || return 1
         res_name=$(echo "$selected" | awk '{print $1}')
     else
-        selected=$(kubectl get deploy,sts,ds -n "$ns" --no-headers -o custom-columns="KIND:.kind,NAME:.metadata.name" 2>/dev/null | \
-            awk '{print $2 " [" $1 "]"}' | \
-            fzf --prompt="📦 Select resource in namespace $ns ❯ ") || return 1
+        selected=$(kubectl get deploy,sts,ds -n "$ns" --no-headers -o custom-columns="KIND:.kind,NAME:.metadata.name" 2>/dev/null \
+            | awk '{print $2 " [" $1 "]"}' \
+            | fzf --prompt="📦 Select resource in namespace $ns ❯ ") || return 1
         res_name=$(echo "$selected" | awk '{print $1}')
     fi
 
     echo "$res_name"
 }
-
-
 
 # Added StatefulSet support

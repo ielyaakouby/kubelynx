@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 select_monitor_menu() {
     GREEN='\033[0;32m'
     RED='\033[0;31m'
     YELLOW='\033[1;33m'
-    NC='\033[0m'  # No Color
+    NC='\033[0m' # No Color
 
     while true; do
         options=(
@@ -22,27 +25,25 @@ select_monitor_menu() {
             "↑ Go Home"
         )
 
-
-    local selected_action
-    selected_action=$(printf "%s\n" "${options[@]}" | \
-        fzf \
-            --prompt="Main Menu ❯ Monitor Menu ❯ " \
-            --border=rounded \
-            --border-label="🩺 Kubernetes doctor 🩺" \
-            --height=40% \
-            --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
+        local selected_action
+        selected_action=$(printf "%s\n" "${options[@]}" \
+            | fzf \
+                --prompt="Main Menu ❯ Monitor Menu ❯ " \
+                --border=rounded \
+                --border-label="🩺 Kubernetes doctor 🩺" \
+                --height=40% \
+                --color="fg:#00FFFF,bg:#000000,hl:#00FF00,fg+:#FFFFFF,bg+:#000000,prompt:italic:green,border:blue,header:yellow")
 
         case $selected_action in
             *"Go Back") return 0 ;;
             *"Top Pods by CPU/Memory") kube_top_pods ;;
             *"Top Node by CPU/Memory") kube_top_nodes ;;
-            *"Go Home") menu::select_main_action;;
+            *"Go Home") menu::select_main_action ;;
             *"View Node Events")
                 get_node_events
                 print_separator
                 ;;
             *"Check Pods Status by Node")
-                source /data/winw/carrefour/caas/ok_scripts/ok_githubb/k8s-scripts/monitoring/_monitor_node_pods.sh
                 ok_check_node_pods
                 print_separator
                 ;;

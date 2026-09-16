@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 print_live_usage_header() {
     local pod_name="$1"
     local namespace="$2"
@@ -30,12 +32,12 @@ monitor_pod_resources_allocation() {
 
         if [[ -z "$POD_NAME" ]]; then
             pod_info=$(kubectl get pods --all-namespaces --no-headers | fzf --prompt="🧩 Select pod (from all namespaces): ")
-            POD_NAME=$(awk '{print $2}' <<< "$pod_info")
-            NAMESPACE=$(awk '{print $1}' <<< "$pod_info")
+            POD_NAME=$(awk '{print $2}' <<<"$pod_info")
+            NAMESPACE=$(awk '{print $1}' <<<"$pod_info")
         else
             pod_info=$(kubectl get pods --all-namespaces --no-headers | grep -m1 "$POD_NAME")
-            POD_NAME=$(awk '{print $2}' <<< "$pod_info")
-            NAMESPACE=$(awk '{print $1}' <<< "$pod_info")
+            POD_NAME=$(awk '{print $2}' <<<"$pod_info")
+            NAMESPACE=$(awk '{print $1}' <<<"$pod_info")
         fi
 
         [[ -z "$NAMESPACE" || -z "$POD_NAME" ]] && {
@@ -73,8 +75,7 @@ monitor_pod_resources_allocation() {
         else
             echo -e "${LIGHT_RED}❌ Invalid format. Try again: e.g., 30s, 2m, 1h, or leave empty for infinite.${RESET}"
         fi
-done
-
+    done
 
     echo -e "\n${YELLOW}Selected Namespace:${RESET} $NAMESPACE"
     echo -e "${YELLOW}Selected Pod:${RESET} $POD_NAME"
@@ -96,11 +97,11 @@ done
 
         echo -e "${LIGHT_BLUE}### Resources per container:${RESET}"
         echo "$pod_resources" | jq -c '.spec.containers[]' | while read -r container; do
-            name=$(jq -r '.name' <<< "$container")
-            cpu_req=$(jq -r '.resources.requests.cpu // "0"' <<< "$container")
-            cpu_lim=$(jq -r '.resources.limits.cpu // "0"' <<< "$container")
-            mem_req=$(jq -r '.resources.requests.memory // "0"' <<< "$container")
-            mem_lim=$(jq -r '.resources.limits.memory // "0"' <<< "$container")
+            name=$(jq -r '.name' <<<"$container")
+            cpu_req=$(jq -r '.resources.requests.cpu // "0"' <<<"$container")
+            cpu_lim=$(jq -r '.resources.limits.cpu // "0"' <<<"$container")
+            mem_req=$(jq -r '.resources.requests.memory // "0"' <<<"$container")
+            mem_lim=$(jq -r '.resources.limits.memory // "0"' <<<"$container")
 
             echo -e "${LIGHT_BLUE}🔹 Container: $name${RESET}"
             echo "      CPU Request:  $cpu_req"
@@ -109,10 +110,10 @@ done
             echo "      Memory Limit: $mem_lim"
 
             cpu_pct=$(echo "$cpu_req" | awk '/m$/ {val=substr($1,1,length($1)-1); print val/1000} /^[0-9.]+$/ {print $1}')
-            (( $(echo "$cpu_pct >= 0.8" | bc -l) )) && echo "__ALERT__CPU:$name" >> "$tmp_alerts_file"
+            (($(echo "$cpu_pct >= 0.8" | bc -l))) && echo "__ALERT__CPU:$name" >>"$tmp_alerts_file"
 
             mem_val=$(echo "$mem_req" | sed 's/Mi//' | grep -Eo '[0-9]+')
-            [[ -n "$mem_val" && "$mem_val" -ge 512 ]] && echo "__ALERT__MEM:$name" >> "$tmp_alerts_file"
+            [[ -n "$mem_val" && "$mem_val" -ge 512 ]] && echo "__ALERT__MEM:$name" >>"$tmp_alerts_file"
         done
 
         while read -r line; do
@@ -126,7 +127,7 @@ done
                     alerts+=("⚠️  MEMORY requests in container $cname exceed 512Mi")
                     ;;
             esac
-        done < "$tmp_alerts_file"
+        done <"$tmp_alerts_file"
         rm -f "$tmp_alerts_file"
 
         if [[ ${#alerts[@]} -gt 0 ]]; then

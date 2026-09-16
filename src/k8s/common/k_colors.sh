@@ -1,10 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # colors.sh - ANSI color definitions for reuse
 # shellcheck disable=SC2034  # Some variables may be unused in this file but used when sourced
 
 # ─── Basic Colors ─────────────────────────────────────────────────────────
 RESET='\033[0m'
-NC="$RESET"  # No Color alias
+NC="$RESET" # No Color alias
 
 BLACK='\033[0;30m'
 RED='\033[0;31m'
@@ -39,28 +42,28 @@ COLOR_CYAN="$LIGHT_CYAN"
 COLOR_RESET="$RESET"
 
 print_color() {
-  local color_name="$1"
-  shift
-  local message="$*"
+    local color_name="$1"
+    shift
+    local message="$*"
 
-  case "$color_name" in
-    red) echo -e "${RED}${message}${RESET}" ;;
-    green) echo -e "${GREEN}${message}${RESET}" ;;
-    yellow) echo -e "${YELLOW}${message}${RESET}" ;;
-    blue) echo -e "${BLUE}${message}${RESET}" ;;
-    magenta) echo -e "${MAGENTA}${message}${RESET}" ;;
-    cyan) echo -e "${CYAN}${message}${RESET}" ;;
-    light_red) echo -e "${LIGHT_RED}${message}${RESET}" ;;
-    light_green) echo -e "${LIGHT_GREEN}${message}${RESET}" ;;
-    light_yellow) echo -e "${LIGHT_YELLOW}${message}${RESET}" ;;
-    light_blue) echo -e "${LIGHT_BLUE}${message}${RESET}" ;;
-    light_magenta) echo -e "${LIGHT_MAGENTA}${message}${RESET}" ;;
-    light_cyan) echo -e "${LIGHT_CYAN}${message}${RESET}" ;;
-    orange) echo -e "${ORANGE}${message}${RESET}" ;;
-    gray) echo -e "${GRAY}${message}${RESET}" ;;
-    bold) echo -e "${BOLD}${message}${RESET}" ;;
-    *) echo -e "$message" ;;
-  esac
+    case "$color_name" in
+        red) echo -e "${RED}${message}${RESET}" ;;
+        green) echo -e "${GREEN}${message}${RESET}" ;;
+        yellow) echo -e "${YELLOW}${message}${RESET}" ;;
+        blue) echo -e "${BLUE}${message}${RESET}" ;;
+        magenta) echo -e "${MAGENTA}${message}${RESET}" ;;
+        cyan) echo -e "${CYAN}${message}${RESET}" ;;
+        light_red) echo -e "${LIGHT_RED}${message}${RESET}" ;;
+        light_green) echo -e "${LIGHT_GREEN}${message}${RESET}" ;;
+        light_yellow) echo -e "${LIGHT_YELLOW}${message}${RESET}" ;;
+        light_blue) echo -e "${LIGHT_BLUE}${message}${RESET}" ;;
+        light_magenta) echo -e "${LIGHT_MAGENTA}${message}${RESET}" ;;
+        light_cyan) echo -e "${LIGHT_CYAN}${message}${RESET}" ;;
+        orange) echo -e "${ORANGE}${message}${RESET}" ;;
+        gray) echo -e "${GRAY}${message}${RESET}" ;;
+        bold) echo -e "${BOLD}${message}${RESET}" ;;
+        *) echo -e "$message" ;;
+    esac
 }
 
 #print_color green "✔ Opération réussie"
@@ -73,11 +76,11 @@ CLR_RESET="\e[0m"
 CLR_BOLD="\e[1m"
 
 # Couleurs sémantiques
-CLR_INFO="\e[36m"       # Cyan
-CLR_WARN="\e[33m"       # Jaune
-CLR_SUCCESS="\e[32m"    # Vert
-CLR_ERROR="\e[31m"      # Rouge
-CLR_CONTEXT="\e[34m"    # Bleu
+CLR_INFO="\e[36m"    # Cyan
+CLR_WARN="\e[33m"    # Jaune
+CLR_SUCCESS="\e[32m" # Vert
+CLR_ERROR="\e[31m"   # Rouge
+CLR_CONTEXT="\e[34m" # Bleu
 
 # Icônes personnalisables
 ICON_INFO="[i]"

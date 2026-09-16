@@ -1,12 +1,15 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 pad_line() {
     local padding_char="─" #°
     local prompt_length=${#1}
     local terminal_width=$(tput cols)
     local fill_width=$((terminal_width - prompt_length))
-    printf -v pad_line '%*s' "$fill_width" ''  # create a space-filled line
-    pad_line=${pad_line// /$padding_char}      # replace spaces with '═'
+    printf -v pad_line '%*s' "$fill_width" '' # create a space-filled line
+    pad_line=${pad_line// /$padding_char}     # replace spaces with '═'
     echo -n "$pad_line"
 }
 
@@ -38,7 +41,6 @@ kget_pods_by_status() {
         "Failed:                   The pod has failed to run."
         "Not Running:              Pods that are not in a 'Running' state and have containers not ready."
     )
-
 
     if [[ "$1" =~ ^( -h|--help|help|h)$ ]]; then
         echo -e "\nKubernetes Pod Statuses:\n"
@@ -128,8 +130,6 @@ kget_pods_by_status() {
         namespace="$selected_namespace"
     fi
 
-
-
     #echo -e "${COLOR_ORANGE}Selected status:${COLOR_RESET} $selected_status  ${COLOR_ORANGE}Namespace:${COLOR_RESET} $namespace"
     namespace_in_case_all="$(echo "--all-namespaces" | sed 's/--\([a-zA-Z]*\)-.*/\1/')"
     echo -e "${COLOR_ORANGE}k8s check ${COLOR_RESET} $selected_status ${COLOR_ORANGE} in ${COLOR_RESET} $namespace_in_case_all ${COLOR_ORANGE}namespace(s)${COLOR_RESET}"
@@ -139,7 +139,7 @@ kget_pods_by_status() {
     all_pod_running_data_namespaces=""
     selected_statuses=""
     #all_pod_not_running_data_table=""
-    
+
     if [[ "$namespace" == "--all-namespaces" ]]; then
         #all_pod_not_running_data="$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace} {.metadata.name} {.status.phase} {.status.containerStatuses[*].ready}{"\n"}{end}' | awk '($3 != "Succeeded" || $3 != "Running || $3 != "Completed") && ($4 == "false")')"
 
@@ -155,7 +155,7 @@ kget_pods_by_status() {
     all_pod_not_running_data_namespaces=$(echo "$all_pod_not_running_data" | awk '{print $1}' | sort -u)
     #all_pod_running_data_namespaces=$(echo "$all_pod_running_data" | awk '{print $1}' | sort -u)
 
-# ► 
+    # ►
     if [[ "$selected_status" == "Not Running" ]]; then
         echo "$all_pod_not_running_data_namespaces" | while read namespace; do
             echo -e "\n──┬ namespace: $namespace"
@@ -173,7 +173,7 @@ kget_pods_by_status() {
                 result_pod_logs=$(kubectl logs "$pod" -n "$ns" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")
                 #if [[ -z "${result_pod_event}" || -z "${result_pod_event}" ]]; then
                 if [[ ${result_pod_event} != "" || ${result_pod_logs} != "" ]]; then
-                #echo "──┬ namespace: $namespace"
+                    #echo "──┬ namespace: $namespace"
                     #echo "  │"
                     echo "  ├─ ${pod}"
                     #echo "  ├─┬[pod] ${pod}"
@@ -196,12 +196,12 @@ kget_pods_by_status() {
 
             done
         done
-   # elif [[ "$selected_status" == "Running" ]]; then
+        # elif [[ "$selected_status" == "Running" ]]; then
 
     elif [[ "$selected_status" == "all" ]]; then
         selected_statuses=("${status_list[@]:0:${#status_list[@]}-2}")
         for status in "${selected_statuses[@]}"; do
-            
+
             if echo "$all_pod_not_running_data_namespaces" | grep -q "$status"; then
                 echo -e "\n${COLOR_ORANGE}Status:${COLOR_RESET} $status"
             fi
@@ -245,8 +245,8 @@ kget_pods_by_status() {
                     echo "$sma" | awk '{print $1}' | while read -r pod; do
                         #result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null | \
                         #    jq -r '.items[] | select(.type != "Normal" or (.reason | test("BackOff|Error|Failed|CrashLoopBackOff|Warning"))) | "[" + .reason + "] " + (.message | split(" ")[0:10] | join(" "))')
-                        result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null | \
-                            jq -r '.items[]
+                        result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null \
+                            | jq -r '.items[]
                                 | select(.type != "Normal" or (
                                     .reason | test("CrashLoopBackOff|Warning|NodeNotReady|PodEvicted|OOMKilled|OutOfcpu|OutOfmemory|Pending|Terminating|NodeLost|Unknown|Evicted|DeadlineExceeded|ImageInspectError|ContainerCannotRun|ErrImagePull|CreateContainerConfigError|InvalidImageName|Shutdown|Failed|Unhealthy|BackOff|Error")
                                 ))
@@ -256,7 +256,7 @@ kget_pods_by_status() {
                         #result_pod_logs=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")
                         result_pod_logs=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused|NodeNotReady|PodEvicted|OutOfcpu|OutOfmemory|Pending|Terminating|NodeLost|Unknown|Evicted|DeadlineExceeded|ImageInspectError|ContainerCannotRun|ErrImagePull|CreateContainerConfigError|InvalidImageName|Shutdown")
 
-                            if [[ ${result_pod_event} != "" || ${result_pod_logs} != "" ]]; then
+                        if [[ ${result_pod_event} != "" || ${result_pod_logs} != "" ]]; then
                             echo "  │"
                             echo "  ├─┬[pod] ${pod}"
                             echo "  │ ┼┬"
@@ -282,16 +282,16 @@ kget_pods_by_status() {
         status=("$selected_status")
         if [[ "$namespace" == "--all-namespaces" ]]; then
             echo "$all_pod_not_running_data_namespaces" | while read -r namespace; do
-                sma=$(kubectl get po -n "$namespace" --no-headers | grep -v "Running\|Completed" | awk -v status="$status" '$3 == status {print $1, $2, $3, $4}')
+                sma=$(kubectl get po -n "$namespace" --no-headers | grep -v "Running\|Completed" | awk -v status="$selected_status" '$3 == status {print $1, $2, $3, $4}')
                 if [[ -n "$sma" ]]; then
                     # Display namespace header
                     echo -e "\n${ORANGE}──┬ ${RESET}${ORANGE} namespace: $namespace${RESET}"
-                    
+
                     # Iterate through each pod in the namespace
                     echo "$sma" | awk '{print $1}' | while read -r pod; do
                         # Get and filter pod-related events
-                        result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null | \
-                            jq -r '.items[] | select(.type != "Normal" or (.reason | test("BackOff|Error|Failed|CrashLoopBackOff|Warning"))) | "[" + .reason + "] " + (.message | split(" ")[0:10] | join(" "))')
+                        result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null \
+                            | jq -r '.items[] | select(.type != "Normal" or (.reason | test("BackOff|Error|Failed|CrashLoopBackOff|Warning"))) | "[" + .reason + "] " + (.message | split(" ")[0:10] | join(" "))')
                         #  result_pod_logs0=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null)
                         result_pod_logs=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")
                         if [[ ${result_pod_event} != "" || ${result_pod_logs} != "" ]]; then
@@ -316,37 +316,37 @@ kget_pods_by_status() {
                 fi
             done
         else
-                # Get pods that are not in Running or Completed state
-                sma=$(kubectl get po -n "$namespace" --no-headers | grep -v "Running\|Completed" | awk -v status="$status" '$3 == status {print $1, $2, $3, $4}')
-                if [[ -n "$sma" ]]; then
-                    # Print namespace header with no trailing spaces
-                    echo -e "\n${ORANGE}──┬ ${RESET}${ORANGE} namespace: $namespace${RESET}"
-                    
-                    echo "$sma" | awk '{print $1}' | while read -r pod; do
-                        result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null | \
-                            jq -r '.items[] | select(.type != "Normal" or (.reason | test("BackOff|Error|Failed|CrashLoopBackOff|Warning"))) | "[" + .reason + "] " + (.message | split(" ")[0:10] | join(" "))')
-                        result_pod_logs=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")
-                        if [[ ${result_pod_event} == "" || ${result_pod_logs} == "" ]]; then
-                            echo "  │"
-                            echo "  ├─┬[pod] ${pod}"
-                            echo "  │ ┼┬"
-                            if [[ ${result_pod_logs} != "" ]]; then
-                                echo "${result_pod_logs}" | while read log; do
-                                    echo -e "  │  ├ ${ORANGE}[log]$log${RESET}"
-                                done
-                            fi
-                            if [[ ${result_pod_event} != "" ]]; then
-                                echo "${result_pod_event}" | while read event; do
-                                    echo -e "  │  ├ ${ORANGE}[event]$event${RESET}"
-                                done
-                            fi
-                            if [[ ${result_pod_event} == "" || ${result_pod_logs} == "" ]]; then
-                                echo -e "  │  ├ no event / log error"
-                            fi
+            # Get pods that are not in Running or Completed state
+            sma=$(kubectl get po -n "$namespace" --no-headers | grep -v "Running\|Completed" | awk -v status="$selected_status" '$3 == status {print $1, $2, $3, $4}')
+            if [[ -n "$sma" ]]; then
+                # Print namespace header with no trailing spaces
+                echo -e "\n${ORANGE}──┬ ${RESET}${ORANGE} namespace: $namespace${RESET}"
+
+                echo "$sma" | awk '{print $1}' | while read -r pod; do
+                    result_pod_event=$(kubectl -n "$namespace" get events --field-selector involvedObject.kind="Pod",involvedObject.name="$pod" -o json 2>/dev/null \
+                        | jq -r '.items[] | select(.type != "Normal" or (.reason | test("BackOff|Error|Failed|CrashLoopBackOff|Warning"))) | "[" + .reason + "] " + (.message | split(" ")[0:10] | join(" "))')
+                    result_pod_logs=$(kubectl logs "$pod" -n "$namespace" 2>/dev/null | grep -iE "Unhealthy|Error|Failed|ImagePullBackOff|CrashLoopBackOff|OOMKilled|Connection refused")
+                    if [[ ${result_pod_event} == "" || ${result_pod_logs} == "" ]]; then
+                        echo "  │"
+                        echo "  ├─┬[pod] ${pod}"
+                        echo "  │ ┼┬"
+                        if [[ ${result_pod_logs} != "" ]]; then
+                            echo "${result_pod_logs}" | while read log; do
+                                echo -e "  │  ├ ${ORANGE}[log]$log${RESET}"
+                            done
                         fi
-                    done
-                fi
+                        if [[ ${result_pod_event} != "" ]]; then
+                            echo "${result_pod_event}" | while read event; do
+                                echo -e "  │  ├ ${ORANGE}[event]$event${RESET}"
+                            done
+                        fi
+                        if [[ ${result_pod_event} == "" || ${result_pod_logs} == "" ]]; then
+                            echo -e "  │  ├ no event / log error"
+                        fi
+                    fi
+                done
             fi
+        fi
     fi
 }
 
@@ -444,9 +444,9 @@ ok_get_service_info() {
 }
 
 parse_arguments() {
-    if [[ "$#" -eq 5 && "$2" == "where" && "$3" == "label" && ( "$4" == "is" || "$4" == "in" ) ]]; then
+    if [[ "$#" -eq 5 && "$2" == "where" && "$3" == "label" && ("$4" == "is" || "$4" == "in") ]]; then
         RESOURCE="$1"
-        LABELS="${5//,/\\|}"  # Replace commas with '|' for regex
+        LABELS="${5//,/\\|}" # Replace commas with '|' for regex
     else
         echo "Missing or incorrect arguments. Entering interactive mode."
 
@@ -460,7 +460,7 @@ parse_arguments() {
 
         echo "Please specify at least one label or multiple labels separated by commas."
         read -p "Enter labels (app=name <> app=name or env=prd <> app=name and env=prd...) : " input_labels
-        
+
         if [[ $input_labels == *"or"* ]]; then
             LABELS=$(echo "$input_labels" | sed 's/ \(or\) /\|/g') # app.kubernetes.io/name=yesterday|app.kubernetes.io/component=monit|ing
             echo "LABELS or = $LABELS"
@@ -481,9 +481,9 @@ list_available_resources() {
 display_resources_with_labels() {
     echo -e "${COLOR_BAGROUND_GREEN}NAMESPACE\tPOD\tSTATUS\tREADY\tAGE${reset}"
 
-    kubectl get "$RESOURCE" --all-namespaces --show-labels 2>/dev/null | \
-    grep -E "$LABELS" | \
-    awk -v colors="${colors[*]}" -v reset="$reset" '
+    kubectl get "$RESOURCE" --all-namespaces --show-labels 2>/dev/null \
+        | grep -E "$LABELS" \
+        | awk -v colors="${colors[*]}" -v reset="$reset" '
     BEGIN {
         split(colors, colorArray, " ");
         colorIndex = 0;

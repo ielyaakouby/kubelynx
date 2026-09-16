@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
+# Shared globals (NAMESPACE, colors, resource names) are defined by
+# bin/kubelynx.sh and sibling modules sourced into the same shell.
+# shellcheck disable=SC2154,SC2086,SC2155,SC2221,SC2222,SC2317,SC2162,SC2034,SC2031,SC2030,SC2015,SC2207,SC2001,SC2181,SC2140,SC2046
 # Dependencies: kubectl, jq, fzf
 
 monitor_pod_resources() {
     ensure_pod_and_namespace || return 1
-    [[ -z "$NAMESPACE" || -z "$POD_NAME" ]] && { echo "Namespace or pod name missing."; return 1; }
+    [[ -z "$NAMESPACE" || -z "$POD_NAME" ]] && {
+        echo "Namespace or pod name missing."
+        return 1
+    }
 
     echo -e "\n${YELLOW}Namespace:${RESET} $NAMESPACE"
     echo -e "${YELLOW}Pod:${RESET} $POD_NAME"
@@ -34,11 +40,14 @@ get_pod_limits_requests() {
 
     local pod_json
     pod_json=$(kubectl get pod "$POD_NAME" -n "$NAMESPACE" -o json)
-    [[ -z "$pod_json" ]] && { echo -e "${RED}Failed to retrieve pod data.${RESET}"; return 1; }
+    [[ -z "$pod_json" ]] && {
+        echo -e "${RED}Failed to retrieve pod data.${RESET}"
+        return 1
+    }
 
     jq -r '
         .spec.containers[] | "Container: \(.name)\n  Limits:\n    CPU: \(.resources.limits.cpu // \"Not Set\")\n    Memory: \(.resources.limits.memory // \"Not Set\")\n  Requests:\n    CPU: \(.resources.requests.cpu // \"Not Set\")\n    Memory: \(.resources.requests.memory // \"Not Set\")\n"
-    ' <<< "$pod_json"
+    ' <<<"$pod_json"
 }
 
 monitor_pod_usage_over_time() {
@@ -54,27 +63,39 @@ monitor_pod_usage_over_time() {
 
     # Saisie de la durée
     read -rp "⏱️  Duration (e.g., 120s, 2h, 3m, 1d): " duration
-    [[ -z "$duration" ]] && { echo -e "${LIGHT_RED}❌ Duration is required.${RESET}"; return 1; }
+    [[ -z "$duration" ]] && {
+        echo -e "${LIGHT_RED}❌ Duration is required.${RESET}"
+        return 1
+    }
 
     # Conversion de la durée en secondes
     unit="${duration: -1}"
-    value="${duration%$unit}"
+    value="${duration%"$unit"}"
     case "$unit" in
         s) duration=$value ;;
         m) duration=$((value * 60)) ;;
         h) duration=$((value * 3600)) ;;
         d) duration=$((value * 86400)) ;;
-        *) echo -e "${LIGHT_RED}❌ Invalid duration unit. Use s, m, h or d.${RESET}"; return 1 ;;
+        *)
+            echo -e "${LIGHT_RED}❌ Invalid duration unit. Use s, m, h or d.${RESET}"
+            return 1
+            ;;
     esac
 
     # Sélection du namespace
-#    echo -e "${LIGHT_YELLOW}📦 Select a namespace (or press Enter to choose interactively):${RESET}"
-#    read -rp "Namespace: " namespace
+    #    echo -e "${LIGHT_YELLOW}📦 Select a namespace (or press Enter to choose interactively):${RESET}"
+    #    read -rp "Namespace: " namespace
     read -rp "$(echo -e "${LIGHT_YELLOW}📦 Select a namespace (or press Enter to choose interactively): ${RESET}")" namespace
 
     if [[ -z "$namespace" ]]; then
-        namespace=$( (echo "all"; kubectl get ns --no-headers 2>/dev/null | awk '{print $1}') | fzf --prompt="📦 Select a namespace (or 'all'): ")
-        [[ -z "$namespace" ]] && { echo -e "${LIGHT_RED}❌ No namespace selected.${RESET}"; return 1; }
+        namespace=$( (
+            echo "all"
+            kubectl get ns --no-headers 2>/dev/null | awk '{print $1}'
+        ) | fzf --prompt="📦 Select a namespace (or 'all'): ")
+        [[ -z "$namespace" ]] && {
+            echo -e "${LIGHT_RED}❌ No namespace selected.${RESET}"
+            return 1
+        }
     fi
 
     # Vérification que le namespace existe
@@ -90,28 +111,40 @@ monitor_pod_usage_over_time() {
         if [[ "$namespace" == "all" ]]; then
             echo "11"
             pod_info=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null | fzf --prompt="🩺 Select pod: ")
-            [[ -z "$pod_info" ]] && { echo -e "${LIGHT_RED}❌ No pod selected.${RESET}"; return 1; }
-            pod_name=$(awk '{print $2}' <<< "$pod_info")
-            namespace=$(awk '{print $1}' <<< "$pod_info")
+            [[ -z "$pod_info" ]] && {
+                echo -e "${LIGHT_RED}❌ No pod selected.${RESET}"
+                return 1
+            }
+            pod_name=$(awk '{print $2}' <<<"$pod_info")
+            namespace=$(awk '{print $1}' <<<"$pod_info")
         else
             echo "111"
             pod_name=$(kubectl -n "$namespace" get pods --no-headers 2>/dev/null | fzf --prompt="🩺 Select pod: " | awk '{print $1}')
-            [[ -z "$pod_name" ]] && { echo -e "${LIGHT_RED}❌ No pod selected.${RESET}"; return 1; }
+            [[ -z "$pod_name" ]] && {
+                echo -e "${LIGHT_RED}❌ No pod selected.${RESET}"
+                return 1
+            }
         fi
     else
         echo "2"
         if [[ "$namespace" == "all" ]]; then
             echo "22"
             pod_info=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null | grep -m1 "$pattern" | fzf --prompt="🩺 Select pod: ")
-            [[ -z "$pod_info" ]] && { echo -e "${LIGHT_RED}❌ No pod matching pattern '$pattern' found.${RESET}"; return 1; }
-            pod_name=$(awk '{print $2}' <<< "$pod_info")
-            namespace=$(awk '{print $1}' <<< "$pod_info")
+            [[ -z "$pod_info" ]] && {
+                echo -e "${LIGHT_RED}❌ No pod matching pattern '$pattern' found.${RESET}"
+                return 1
+            }
+            pod_name=$(awk '{print $2}' <<<"$pod_info")
+            namespace=$(awk '{print $1}' <<<"$pod_info")
             echo "pod_name: $pod_name"
             echo "ns: $namespace"
         else
             echo "222"
             pod_name=$(kubectl -n "$namespace" get pods --no-headers 2>/dev/null | grep -m1 "$pattern" | awk '{print $1}' | fzf --prompt="🩺 Select pod: " | awk '{print $1}')
-            [[ -z "$pod_name" ]] && { echo -e "${LIGHT_RED}❌ No pod matching pattern '$pattern' found in namespace '$namespace'.${RESET}"; return 1; }
+            [[ -z "$pod_name" ]] && {
+                echo -e "${LIGHT_RED}❌ No pod matching pattern '$pattern' found in namespace '$namespace'.${RESET}"
+                return 1
+            }
         fi
     fi
 
@@ -123,7 +156,10 @@ monitor_pod_usage_over_time() {
 
     # Sélection de la ressource à surveiller
     resource=$(echo -e "CPU\nMemory\nBoth" | fzf --prompt="🩺 Select resource type: ")
-    [[ -z "$resource" ]] && { echo -e "${LIGHT_RED}❌ No resource type selected.${RESET}"; return 1; }
+    [[ -z "$resource" ]] && {
+        echo -e "${LIGHT_RED}❌ No resource type selected.${RESET}"
+        return 1
+    }
 
     # Vérification que metrics-server est installé
     if ! kubectl top pods --help &>/dev/null; then
@@ -141,16 +177,20 @@ monitor_pod_usage_over_time() {
     fi
 
     # Calcul des ressources totales
-    cpu_request_total=0; cpu_limit_total=0
-    mem_request_total=0; mem_limit_total=0
-    has_cpu_request=false; has_cpu_limit=false
-    has_mem_request=false; has_mem_limit=false
+    cpu_request_total=0
+    cpu_limit_total=0
+    mem_request_total=0
+    mem_limit_total=0
+    has_cpu_request=false
+    has_cpu_limit=false
+    has_mem_request=false
+    has_mem_limit=false
 
     while IFS= read -r row; do
-        cpu_req=$(jq -r '.resources.requests.cpu // empty' <<< "$row")
-        cpu_lim=$(jq -r '.resources.limits.cpu // empty' <<< "$row")
-        mem_req=$(jq -r '.resources.requests.memory // empty' <<< "$row")
-        mem_lim=$(jq -r '.resources.limits.memory // empty' <<< "$row")
+        cpu_req=$(jq -r '.resources.requests.cpu // empty' <<<"$row")
+        cpu_lim=$(jq -r '.resources.limits.cpu // empty' <<<"$row")
+        mem_req=$(jq -r '.resources.requests.memory // empty' <<<"$row")
+        mem_lim=$(jq -r '.resources.limits.memory // empty' <<<"$row")
 
         # CPU requests
         if [[ -n "$cpu_req" ]]; then
@@ -187,7 +227,7 @@ monitor_pod_usage_over_time() {
             ((mem_limit_total += mem_val))
             has_mem_limit=true
         fi
-    done < <(jq -c '.spec.containers[]' <<< "$pod_desc")
+    done < <(jq -c '.spec.containers[]' <<<"$pod_desc")
 
     # Affichage des ressources
     cpu_request_display=$([[ "$has_cpu_request" == true ]] && echo "${cpu_request_total}m" || echo "N/A")
@@ -206,8 +246,11 @@ monitor_pod_usage_over_time() {
     echo -e "${LIGHT_GREEN}Start Time: ${RESET}$(date '+%Y-%m-%d %H:%M:%S')\n"
 
     # Démarrer la surveillance
-    max_cpu=0; total_cpu=0; count=0
-    max_mem=0; total_mem=0
+    max_cpu=0
+    total_cpu=0
+    count=0
+    max_mem=0
+    total_mem=0
     start_time_=$(date '+%Y-%m-%d %H:%M:%S')
 
     for ((i = 1; i <= duration; i++)); do
@@ -225,22 +268,22 @@ monitor_pod_usage_over_time() {
         fi
 
         # Extraire les valeurs CPU et mémoire
-        cpu=$(awk '{print $2}' <<< "$usage")
-        mem=$(awk '{print $3}' <<< "$usage")
-        cpu_val=$(tr -dc '0-9' <<< "$cpu")
-        mem_val=$(tr -dc '0-9' <<< "$mem")
+        cpu=$(awk '{print $2}' <<<"$usage")
+        mem=$(awk '{print $3}' <<<"$usage")
+        cpu_val=$(tr -dc '0-9' <<<"$cpu")
+        mem_val=$(tr -dc '0-9' <<<"$mem")
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
         # Afficher les métriques
         output="${LIGHT_YELLOW}[$timestamp]${RESET}"
         if [[ "$resource" =~ CPU|Both ]]; then
             output+=" CPU: ${LIGHT_RED}${cpu}${RESET}"
-            (( cpu_val > max_cpu )) && max_cpu=$cpu_val
+            ((cpu_val > max_cpu)) && max_cpu=$cpu_val
             total_cpu=$((total_cpu + cpu_val))
         fi
         if [[ "$resource" =~ Memory|Both ]]; then
             output+=" Memory: ${LIGHT_RED}${mem}${RESET}"
-            (( mem_val > max_mem )) && max_mem=$mem_val
+            ((mem_val > max_mem)) && max_mem=$mem_val
             total_mem=$((total_mem + mem_val))
         fi
         echo -e "$output"
@@ -296,16 +339,17 @@ kube_top_pods() {
 
     echo -e "\n📊 Showing top pods sorted by $sort_choice in namespace: $ns"
 
+    local -a top_args=(top pod --sort-by="$sort_choice")
     if [[ "$ns" == "all" ]]; then
-        cmd="kubectl top pod --all-namespaces --sort-by=$sort_choice"
+        top_args+=(--all-namespaces)
     else
-        cmd="kubectl top pod -n $ns --sort-by=$sort_choice"
+        top_args+=(-n "$ns")
     fi
 
     if [[ "$display_mode" == "Top X Pods (head)" ]]; then
-        eval "$cmd" | head -n "$((head_count + 1))"
+        kubectl "${top_args[@]}" | head -n "$((head_count + 1))"
     else
-        eval "$cmd"
+        kubectl "${top_args[@]}"
     fi
 }
 
@@ -325,11 +369,10 @@ kube_top_nodes() {
 
     echo -e "\n📊 Showing top nodes sorted by $sort_choice...\n"
 
-    local cmd="kubectl top nodes --sort-by=$sort_choice"
     if [[ "$display_mode" == "Top X Nodes (head)" ]]; then
-        eval "$cmd" | head -n "$((head_count + 1))" | column -t
+        kubectl top nodes --sort-by="$sort_choice" | head -n "$((head_count + 1))" | column -t
     else
-        eval "$cmd" | column -t
+        kubectl top nodes --sort-by="$sort_choice" | column -t
     fi
 }
 

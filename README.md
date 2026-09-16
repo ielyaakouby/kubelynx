@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/assets/kubelynx.png"
+       alt="KubeLynx - Kubernetes diagnostics and troubleshooting CLI"
+       width="900">
+</p>
+
 # 🔬 KubeLynx
 
 See deeper into your Kubernetes clusters.
@@ -8,11 +14,6 @@ KubeLynx is an interactive Kubernetes diagnostics and troubleshooting CLI for in
 [![Latest release](https://img.shields.io/github/v/release/ielyaakouby/kubelynx)](https://github.com/ielyaakouby/kubelynx/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-<p align="center">
-  <img src="docs/assets/kubelynx.png"
-       alt="KubeLynx - Kubernetes diagnostics and troubleshooting CLI"
-       width="900">
-</p>
 
 ## Why KubeLynx
 
